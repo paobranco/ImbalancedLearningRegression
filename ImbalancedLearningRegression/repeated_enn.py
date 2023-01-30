@@ -48,11 +48,12 @@ def repeated_enn(
          k = this.k
        )
       
-      if (len(new_enn) = data_size) { # nothing more can be removed from data set - end iterations and return new data
+      if (len(new_enn) == data_size) { # nothing more can be removed from data set - end iterations and return new data
          return new_enn
       } else{
         
         data_size = len(new_enn) # update number of data points
+        data = new_enn
         i++ # increment i
       }
          

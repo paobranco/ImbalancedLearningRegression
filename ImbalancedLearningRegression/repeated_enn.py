@@ -36,9 +36,10 @@ def repeated_enn(
     k_neighbors_classifier = None  ## user-defined estimator allowing more non-default attributes
                                    ## will ignore k and n_jobs values if not None
   
-    data_size = len(date)
+    data_size = len(data)
 
     i = 0
+    count = 0 ## this keeps track of how many times in a row no new samples could be removed. Once it hits 5 (to ensure it is done), the dataset is returned. Resets to 0 after every time at least 1 sample is removed over an iteration
     while i < max_iter{ #iterates calling enn on the updated dataset until either no more points can be removed or the maximum iterations have been reached
        new_enn = enn(
          data = data.copy(),
@@ -49,13 +50,17 @@ def repeated_enn(
        )
       
       if (len(new_enn) == data_size) { # nothing more can be removed from data set - end iterations and return new data
-         return new_enn
-      } else{
-        
-        data_size = len(new_enn) # update number of data points
-        data = new_enn
-        i++ # increment i
-      }
+        count++
+        if(count == 5){
+          
+          return new_enn ## return dataset
+       
+        }   
+      } 
+      
+      data_size = len(new_enn) # update number of data points
+      data = new_enn
+      i++ # increment i
          
          
     }

@@ -1,9 +1,9 @@
 Nearmiss Undersampling
 ========================================================
 
-Nearmiss is an under-sampling method that utilizes Edited Nearest Neighbor to undersample the majority set in a recurring fashion by removing samples over numerous iterations of ENN. This process continues until no further samples can be removed, or a maximum iteration has been hit.
+Nearmiss is an under-sampling method that....
 
-.. py:function:: repeated_enn(data, y, samp_method = "balance", drop_na_col = True, drop_na_row = True, rel_thres = 0.5, rel_method = "auto", rel_xtrm_type = "both", rel_coef = 1.5, rel_ctrl_pts_rg = None, k = 3, n_jobs = 1, k_neighbors_classifier = None, max_iter = 100)
+.. py:function:: nearmiss(data, y, samp_method = "balance", drop_na_col = True, drop_na_row = True, rel_thres = 0.5, rel_method = "auto", rel_xtrm_type = "both", rel_coef = 1.5, rel_ctrl_pts_rg = None, k = 3, n_jobs = 1, k_neighbors_classifier = None)
 
    
    :param data: Pandas dataframe, the dataset to re-sample.
@@ -22,7 +22,6 @@ Nearmiss is an under-sampling method that utilizes Edited Nearest Neighbor to un
    :param int n_jobs: The number of parallel jobs to run for neighbors search. Must be an integer. See `sklearn.neighbors.KNeighborsClassifier <https://scikit-learn.org/stable/modules/generated/sklearn.neighbors.KNeighborsClassifier.html>`_ for more details.
    :param k_neighbors_classifier: If users want to define more parameters of KNeighborsClassifier, such as ``weights``, ``algorithm``, ``leaf_size``, and ``metric``, they can create an instance of KNeighborsClassifier and pass it to this method. In that case, setting ``k`` and ``n_jobs`` will have no effect.
    :type k_neighbors_classifier: :term:`KNeighborsClassifier`
-   :param max_iter: This specifies the maximum number of iterations of the enn.py function that can be called before returning the undersampled dataset. The default value for this parameter is 100, but if no further samples can be removed before then, the dataset will be returned.
    :return: Re-sampled dataset.
    :rtype: :term:`Pandas dataframe`
    :raises ValueError: If an input attribute has wrong data type or invalid value, or relevance values are all zero or all one.

@@ -69,7 +69,7 @@ def repeated_enn(
       
       data_size = len(new_enn) # update number of data points
       data = new_enn
-      i++ # increment i
+      i = i + 1 # increment i
            
     
   

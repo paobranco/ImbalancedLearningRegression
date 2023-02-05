@@ -1,6 +1,6 @@
 import pandas
 from sklearn.neighbors import KNeighborsClassifier
-from ImbalancedLearningRegression import repeated_enn
+from ImbalancedLearningRegression.repeated_enn import repeated_enn
 
 ## user-defined estimator
 customized_estimator = KNeighborsClassifier(n_neighbors = 5, leaf_size = 60, metric = "manhattan", n_jobs = 2)

@@ -1,7 +1,7 @@
 Repeated Edited Nearest Neighbor
 ========================================================
 
-Repeated Edited Nearest Neighbor is an under-sampling method that  utilizes Edited Nearest Neighbor to undersample the majority set by removing some of the majority samples from the original majority set. This process is repeated until no further samples can be removed or a maximum iteration has been hit.
+Repeated Edited Nearest Neighbor is an under-sampling method that  utilizes Edited Nearest Neighbor to undersample the majority set in a recurring fashion by removing samples over numerous iterations of ENN. This process continues until no further samples can be removed, or a maximum iteration has been hit.
 
 .. py:function:: repeated_enn(data, y, samp_method = "balance", drop_na_col = True, drop_na_row = True, rel_thres = 0.5, rel_method = "auto", rel_xtrm_type = "both", rel_coef = 1.5, rel_ctrl_pts_rg = None, k = 3, n_jobs = 1, k_neighbors_classifier = None, max_iter = 100)
 

@@ -10,31 +10,31 @@ housing = pandas.read_csv(
     "https://raw.githubusercontent.com/paobranco/ImbalancedLearningRegression/master/data/housing.csv"
 )
 
-housing_basic = enn(
+housing_basic = repeated_enn(
     data = housing, 
     y = "SalePrice" 
 )
 
-housing_extreme = enn(
+housing_extreme = repeated_enn(
     data = housing, 
     y = "SalePrice", 
     samp_method = "extreme"
 )
 
-housing_k = enn(
+housing_k = repeated_enn(
     data = housing, 
     y = "SalePrice", 
     k = 6
 )
 
-housing_k_neighbors_classifier = enn(
+housing_k_neighbors_classifier = repeated_enn(
     data = housing, 
     y = "SalePrice", 
     k_neighbors_classifier = customized_estimator
 )
 
 
-housing_combined = enn(
+housing_combined = repeated_enn(
     data = housing, 
     y = "SalePrice",
     samp_method = "extreme", 

@@ -30,7 +30,7 @@ Repeated Edited Nearest Neighbor is an under-sampling method that  utilizes Edit
 References
 ----------
 [1] D. Wilson, “Asymptotic Properties of Nearest Neighbor Rules Using Edited Data,” In IEEE Transactions on Systems, Man, and Cybernetrics, vol. 2 (3), pp. 408-421, 1972.
-[2] 
+[2] I. Tomek, “An Experiment with the Edited Nearest-Neighbor Rule,” IEEE Transactions on Systems, Man, and Cybernetics, vol. 6(6), pp. 448-452, June 1976.
 
 Examples
 --------

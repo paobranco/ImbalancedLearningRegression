@@ -57,7 +57,7 @@ def repeated_enn(
         k = nk
       )
       
-      if (len(new_enn) == data_size) { # nothing more can be removed from data set - end iterations and return new data
+      if (len(new_enn) == data_size): # nothing more can be removed from data set - end iterations and return new data
         count++
         if(count == 5):
           

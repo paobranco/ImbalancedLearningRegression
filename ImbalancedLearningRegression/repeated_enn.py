@@ -33,16 +33,16 @@ def repeated_enn(
     n_jobs = 1,               ## the number of parallel jobs to run for neighbors search
 
     ## user-defined KNeighborsClassifier
-    k_neighbors_classifier = None,  ## user-defined estimator allowing more non-default attributes
+    k_neighbors_classifier = None  ## user-defined estimator allowing more non-default attributes
                                    ## will ignore k and n_jobs values if not None
-  
+  ):
     #rename attributes to be used in call to enn
-    data_size = len(data), #number of samples in dataset
-    ndata = data,
-    ny = y,
-    nsamp_method= samp_method,
-    nrel_thres = rel_thres,
-    nk = k,
+    data_size = len(data) #number of samples in dataset
+    ndata = data
+    ny = y
+    nsamp_method= samp_method
+    nrel_thres = rel_thres
+    nk = k
 
     i = 0
     count = 0 ## this keeps track of how many times in a row no new samples could be removed. Once it hits 5 (to ensure it is done), the dataset is returned. Resets to 0 after every time at least 1 sample is removed over an iteration

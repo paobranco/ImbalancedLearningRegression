@@ -39,4 +39,4 @@ Examples
     >>> from ImbalancedLearningRegression import enn
     from ImbalancedLearningRegression import repeated_enn
     >>> housing = pandas.read_csv("https://raw.githubusercontent.com/paobranco/ImbalancedLearningRegression/master/data/housing.csv")
-    >>> housing_enn = repeated_enn(data = housing, y = "SalePrice")
+    >>> housing_repeated_enn = repeated_enn(data = housing, y = "SalePrice")

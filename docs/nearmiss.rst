@@ -28,7 +28,7 @@ Nearmiss is an under-sampling method that....
 
 References
 ----------
-[1] 
+[1] I. Mani, I. Zhang. “kNN approach to unbalanced data distributions: a case study involving information extraction,” In Proceedings of workshop on learning from imbalanced datasets, 2003.
 
 [2] 
 

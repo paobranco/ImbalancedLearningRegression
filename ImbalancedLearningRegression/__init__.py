@@ -15,6 +15,7 @@ from ImbalancedLearningRegression.gn import gn
 from ImbalancedLearningRegression.ro import ro
 from ImbalancedLearningRegression.cnn import cnn
 from ImbalancedLearningRegression.enn import enn
+from ImbalancedLearningRegression.repeated_enn import repeated_enn
 from ImbalancedLearningRegression.smote import smote
 from ImbalancedLearningRegression.adasyn import adasyn
 from ImbalancedLearningRegression.random_under import random_under
@@ -32,6 +33,7 @@ __all__ = [
     "ro",
     "cnn",
     "enn",
+    "repeated_enn",
     "smote",
     "adasyn",
     "random_under",

@@ -36,6 +36,10 @@ def nearmiss(
   
   """
   
+  NearMiss-1: Majority class examples with minimum average distance to three closest minority class examples.
+  NearMiss-2: Majority class examples with minimum average distance to three furthest minority class examples.
+  NearMiss-3: Majority class examples with minimum distance to each minority class example.
+  
   """
   
   ## pre-process missing values

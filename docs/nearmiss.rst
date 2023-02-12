@@ -9,6 +9,12 @@ Nearmiss is an under-sampling method that....
    :param data: Pandas dataframe, the dataset to re-sample.
    :type data: :term:`Pandas dataframe`
    :param str y: Column name of the target variable in the Pandas dataframe.
+   :param int version: Selects which of 3 versions will be used to near-miss undersample the data. The       versions behave as follows:
+   
+   NearMiss-1: Majority class examples with minimum average distance to three closest minority class examples.
+   NearMiss-2: Majority class examples with minimum average distance to three furthest minority class examples.
+   NearMiss-3: Majority class examples with minimum distance to each minority class example.
+   
    :param str samp_method: Method to determine re-sampling percentage. Either ``balance`` or ``extreme``.
    :param bool drop_na_col: Determine whether or not automatically drop columns containing NaN values. The data frame should not contain any missing values, so it is suggested to keep it as default.
    :param bool drop_na_row: Determine whether or not automatically drop rows containing NaN values. The data frame should not contain any missing values, so it is suggested to keep it as default.
@@ -39,4 +45,4 @@ Examples
 
     >>> from ImbalancedLearningRegression import nearmiss
     >>> housing = pandas.read_csv("https://raw.githubusercontent.com/paobranco/ImbalancedLearningRegression/master/data/housing.csv")
-    >>> housing_repeated_enn = nearmiss(data = housing, y = "SalePrice")
+    >>> housing_repeated_enn = nearmiss(data = housing, y = "SalePrice", version=1)

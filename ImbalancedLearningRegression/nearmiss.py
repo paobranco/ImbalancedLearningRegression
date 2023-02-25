@@ -203,6 +203,98 @@ def nearmiss(
         raise ValueError("redefine phi relevance function: all points are 0")
     ## ---------------------------------------------------------------------- ##
     
+    bumps = [0]
+    
+    for i in range(0, len(y_sort) - 1):
+        if ((y_phi[i] >= rel_thres and y_phi[i + 1] < rel_thres) or 
+            (y_phi[i] < rel_thres and y_phi[i + 1] >= rel_thres)):
+                bumps.append(i + 1)
+    
+    bumps.append(n)
+    
+    ## number of bump classes
+    n_bumps = len(bumps) - 1
+    
+    ## determine indicies for each bump classification
+    b_index = {}
+    
+    for i in range(n_bumps):
+        b_index.update({i: y_sort[bumps[i]:bumps[i + 1]]})
+    
+    ## calculate over / under sampling percentage according to
+    ## bump class and user specified method ("balance" or "extreme")
+    b = round(n / n_bumps)
+    s_perc = []
+    scale = []
+    obj = []
+    
+    if samp_method == "balance":
+        for i in b_index:
+            s_perc.append(b / len(b_index[i]))
+            
+    if samp_method == "extreme":
+        for i in b_index:
+            scale.append(b ** 2 / len(b_index[i]))
+        scale = n_bumps * b / sum(scale)
+        
+        for i in b_index:
+            obj.append(round(b ** 2 / len(b_index[i]) * scale, 2))
+            s_perc.append(round(obj[i] / len(b_index[i]), 1))
+    
+    ## get the indices of rare samples
+    rare_indices = list()
+
+    for i in range(n_bumps):
+        if s_perc[i] >= 1:
+            rare_indices.extend(list(b_index[i].index))
+
+    ## conduct under sampling and store modified training set
+    data_new = pd.DataFrame()
+    
+    for i in range(n_bumps):
+        
+        ## no sampling
+        if s_perc[i] >= 1:
+            
+            ## simply return no sampling
+            ## results to modified training set
+            data_new = pd.concat([data.iloc[b_index[i].index], data_new], ignore_index = True)
+        
+        ## under-sampling
+        if s_perc[i] < 1:
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            ## edit observations in training set
+            ## considered 'majority'
+            ## (see 'under__sampling_enn()' function for details)
+            undersamp_obs = under_sampling_enn(
+                data = data.copy(),
+                index = list(b_index[i].index),
+                estimator = estimator,
+                rare_indices = rare_indices
+            )
+            
+            ## concatenate over-sampling
+            ## results to modified training set
+            data_new = pd.concat([undersamp_obs, data_new], ignore_index = True)
+
+    
+    
+    
     
     ## need to find minority and majority classes to use below
     

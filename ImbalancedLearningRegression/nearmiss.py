@@ -109,8 +109,71 @@ def nearmiss(
     y_sort = y.sort_values(by = d - 1)
     y_sort = y_sort[d - 1]
 
-    ## k-NN classifier
-    estimator = KNeighborsClassifier(n_neighbors = k, n_jobs = n_jobs) if k_neighbors_classifier == None else k_neighbors_classifier
+    def _selection_dist_based(
+        self, X, y, dist_vec, num_samples, key, sel_strategy="nearest"
+    ):
+        """Select the appropriate samples depending of the strategy selected.
+        
+        Taken directly from https://github.com/scikit-learn-contrib/imbalanced-learn/blob/master/imblearn/under_sampling/_prototype_selection/_nearmiss.py
+        
+        Parameters
+        ----------
+        X : {array-like, sparse matrix}, shape (n_samples, n_features)
+            Original samples.
+        y : array-like, shape (n_samples,)
+            Associated label to X.
+        dist_vec : ndarray, shape (n_samples, )
+            The distance matrix to the nearest neigbour.
+        num_samples: int
+            The desired number of samples to select.
+        key : str or int,
+            The target class.
+        sel_strategy : str, optional (default='nearest')
+            Strategy to select the samples. Either 'nearest' or 'farthest'
+        Returns
+        -------
+        idx_sel : ndarray, shape (num_samples,)
+            The list of the indices of the selected samples.
+        """
+
+        # Compute the distance considering the farthest neighbour
+        dist_avg_vec = np.sum(dist_vec[:, -self.nn_.n_neighbors :], axis=1)
+
+        target_class_indices = np.flatnonzero(y == key)
+        if dist_vec.shape[0] != _safe_indexing(X, target_class_indices).shape[0]:
+            raise RuntimeError(
+                "The samples to be selected do not correspond"
+                " to the distance matrix given. Ensure that"
+                " both `X[y == key]` and `dist_vec` are"
+                " related."
+            )
+
+        # Sort the list of distance and get the index
+        if sel_strategy == "nearest":
+            sort_way = False
+        else:  # sel_strategy == "farthest":
+            sort_way = True
+
+        sorted_idx = sorted(
+            range(len(dist_avg_vec)),
+            key=dist_avg_vec.__getitem__,
+            reverse=sort_way,
+        )
+
+        # Throw a warning to tell the user that we did not have enough samples
+        # to select and that we just select everything
+        if len(sorted_idx) < num_samples:
+            warnings.warn(
+                "The number of the samples to be selected is larger"
+                " than the number of samples available. The"
+                " balancing ratio cannot be ensure and all samples"
+                " will be returned."
+            )
+
+        # Select the desired number of samples
+        return sorted_idx[:num_samples]
+    
+    
     
     ## -------------------------------- phi --------------------------------- ##
     ## calculate parameters for phi relevance function
@@ -139,4 +202,64 @@ def nearmiss(
     if all(i == 1 for i in y_phi):
         raise ValueError("redefine phi relevance function: all points are 0")
     ## ---------------------------------------------------------------------- ##
+    
+    
+    ## need to find minority and majority classes to use below
+    
 
+    if version == 1:
+    
+      dist_vec, idx_vec = self.nn_.kneighbors(
+                        X_class, n_neighbors=self.nn_.n_neighbors
+                    )
+                    index_target_class = self._selection_dist_based(
+                        X,
+                        y,
+                        dist_vec,
+                        n_samples,
+                        target_class,
+                        sel_strategy="nearest",
+                    )
+    
+    elif version == 2:
+      dist_vec, idx_vec = self.nn_.kneighbors(
+                        X_class, n_neighbors=target_stats[class_minority]
+                    )
+                    index_target_class = self._selection_dist_based(
+                        X,
+                        y,
+                        dist_vec,
+                        n_samples,
+                        target_class,
+                        sel_strategy="nearest",
+                    )
+    
+    
+    if version == 3:
+    
+      self.nn_ver3_.fit(X_class)
+                    dist_vec, idx_vec = self.nn_ver3_.kneighbors(
+                        _safe_indexing(X, minority_class_indices)
+                    )
+                    idx_vec_farthest = np.unique(idx_vec.reshape(-1))
+                    X_class_selected = _safe_indexing(X_class, idx_vec_farthest)
+                    y_class_selected = _safe_indexing(y_class, idx_vec_farthest)
+
+                    dist_vec, idx_vec = self.nn_.kneighbors(
+                        X_class_selected, n_neighbors=self.nn_.n_neighbors
+                    )
+                    index_target_class = self._selection_dist_based(
+                        X_class_selected,
+                        y_class_selected,
+                        dist_vec,
+                        n_samples,
+                        target_class,
+                        sel_strategy="farthest",
+                    )
+                    # idx_tmp is relative to the feature selected in the
+                    # previous step and we need to find the indirection
+                    index_target_class = idx_vec_farthest[index_target_class]
+    
+  
+  return data_new
+    

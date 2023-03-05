@@ -1,3 +1,5 @@
+"""Class to perform under-sampling based on nearmiss methods."""
+
 ## load dependencies - third party
 import numpy as np
 import pandas as pd
@@ -6,10 +8,15 @@ from sklearn.neighbors import KNeighborsClassifier
 # load dependencies - internal
 from ImbalancedLearningRegression.phi import phi
 from ImbalancedLearningRegression.phi_ctrl_pts import phi_ctrl_pts
+from ImbalancedLearningRegression.under_sampling_enn import under_sampling_enn
+# from phi import phi
+# from phi_ctrl_pts import phi_ctrl_pts
+# from under_sampling_enn import under_sampling_enn
 
-def nearmiss(
-  
-   ## main arguments / inputs
+## majority under-sampling technique for regression with edited nearest neighbor
+def enn(
+    
+    ## main arguments / inputs
     data,                     ## training set (pandas dataframe)
     y,                        ## response variable y by name (string)
     version = 1,              ## version (1, 2, or 3), default 1
@@ -31,18 +38,35 @@ def nearmiss(
     ## user-defined KNeighborsClassifier
     k_neighbors_classifier = None  ## user-defined estimator allowing more non-default attributes
                                    ## will ignore k and n_jobs values if not None
-
-):
+    ):
+    
+    """
   
-  """
+    NearMiss-1: Majority class examples with minimum average distance to three closest minority class examples.
+    NearMiss-2: Majority class examples with minimum average distance to three furthest minority class examples.
+    NearMiss-3: Majority class examples with minimum distance to each minority class example.
   
-  NearMiss-1: Majority class examples with minimum average distance to three closest minority class examples.
-  NearMiss-2: Majority class examples with minimum average distance to three furthest minority class examples.
-  NearMiss-3: Majority class examples with minimum distance to each minority class example.
   
-  """
-  
-  ## pre-process missing values
+    
+    ref:
+    
+    Branco, P., Torgo, L., Ribeiro, R. (2017).
+    SMOGN: A Pre-Processing Approach for Imbalanced Regression.
+    Proceedings of Machine Learning Research, 74:36-50.
+    http://proceedings.mlr.press/v74/branco17a/branco17a.pdf.
+    Branco, P., Torgo, L., & Ribeiro, R. P. (2019). 
+    Pre-processing approaches for imbalanced distributions in regression. 
+    Neurocomputing, 343, 76-99. 
+    https://www.sciencedirect.com/science/article/abs/pii/S0925231219301638
+    Wilson, D. L. (1972). 
+    Asymptotic properties of nearest neighbor rules using edited data. 
+    IEEE Transactions on Systems, Man, and Cybernetics, (3), 408-421.
+    https://ieeexplore.ieee.org/abstract/document/4309137
+    Kunz, N., (2019). SMOGN. 
+    https://github.com/nickkunz/smogn
+    """
+    
+    ## pre-process missing values
     if bool(drop_na_col) == True:
         data = data.dropna(axis = 1)  ## drop columns with nan's
     
@@ -109,71 +133,8 @@ def nearmiss(
     y_sort = y.sort_values(by = d - 1)
     y_sort = y_sort[d - 1]
 
-    def _selection_dist_based(
-        self, X, y, dist_vec, num_samples, key, sel_strategy="nearest"
-    ):
-        """Select the appropriate samples depending of the strategy selected.
-        
-        Taken directly from https://github.com/scikit-learn-contrib/imbalanced-learn/blob/master/imblearn/under_sampling/_prototype_selection/_nearmiss.py
-        
-        Parameters
-        ----------
-        X : {array-like, sparse matrix}, shape (n_samples, n_features)
-            Original samples.
-        y : array-like, shape (n_samples,)
-            Associated label to X.
-        dist_vec : ndarray, shape (n_samples, )
-            The distance matrix to the nearest neigbour.
-        num_samples: int
-            The desired number of samples to select.
-        key : str or int,
-            The target class.
-        sel_strategy : str, optional (default='nearest')
-            Strategy to select the samples. Either 'nearest' or 'farthest'
-        Returns
-        -------
-        idx_sel : ndarray, shape (num_samples,)
-            The list of the indices of the selected samples.
-        """
-
-        # Compute the distance considering the farthest neighbour
-        dist_avg_vec = np.sum(dist_vec[:, -self.nn_.n_neighbors :], axis=1)
-
-        target_class_indices = np.flatnonzero(y == key)
-        if dist_vec.shape[0] != _safe_indexing(X, target_class_indices).shape[0]:
-            raise RuntimeError(
-                "The samples to be selected do not correspond"
-                " to the distance matrix given. Ensure that"
-                " both `X[y == key]` and `dist_vec` are"
-                " related."
-            )
-
-        # Sort the list of distance and get the index
-        if sel_strategy == "nearest":
-            sort_way = False
-        else:  # sel_strategy == "farthest":
-            sort_way = True
-
-        sorted_idx = sorted(
-            range(len(dist_avg_vec)),
-            key=dist_avg_vec.__getitem__,
-            reverse=sort_way,
-        )
-
-        # Throw a warning to tell the user that we did not have enough samples
-        # to select and that we just select everything
-        if len(sorted_idx) < num_samples:
-            warnings.warn(
-                "The number of the samples to be selected is larger"
-                " than the number of samples available. The"
-                " balancing ratio cannot be ensure and all samples"
-                " will be returned."
-            )
-
-        # Select the desired number of samples
-        return sorted_idx[:num_samples]
-    
-    
+    ## k-NN classifier
+    estimator = KNeighborsClassifier(n_neighbors = k, n_jobs = n_jobs) if k_neighbors_classifier == None else k_neighbors_classifier
     
     ## -------------------------------- phi --------------------------------- ##
     ## calculate parameters for phi relevance function
@@ -202,7 +163,8 @@ def nearmiss(
     if all(i == 1 for i in y_phi):
         raise ValueError("redefine phi relevance function: all points are 0")
     ## ---------------------------------------------------------------------- ##
-    
+
+    ## determine bin (rare or normal) by bump classification
     bumps = [0]
     
     for i in range(0, len(y_sort) - 1):
@@ -260,32 +222,19 @@ def nearmiss(
             ## results to modified training set
             data_new = pd.concat([data.iloc[b_index[i].index], data_new], ignore_index = True)
         
+
         ## under-sampling
         if s_perc[i] < 1:
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
             
             ## edit observations in training set
             ## considered 'majority'
             ## (see 'under__sampling_enn()' function for details)
-            undersamp_obs = under_sampling_enn(
+            undersamp_obs = under_sampling_nearmiss(
                 data = data.copy(),
                 index = list(b_index[i].index),
                 estimator = estimator,
-                rare_indices = rare_indices
+                rare_indices = rare_indices,
+                version = version
             )
             
             ## concatenate over-sampling
@@ -293,65 +242,20 @@ def nearmiss(
             data_new = pd.concat([undersamp_obs, data_new], ignore_index = True)
 
     
-    
-    
-    
-    ## need to find minority and majority classes to use below
-    
 
-    if version == 1:
-    
-      dist_vec, idx_vec = self.nn_.kneighbors(
-                        X_class, n_neighbors=self.nn_.n_neighbors
-                    )
-                    index_target_class = self._selection_dist_based(
-                        X,
-                        y,
-                        dist_vec,
-                        n_samples,
-                        target_class,
-                        sel_strategy="nearest",
-                    )
-    
-    elif version == 2:
-      dist_vec, idx_vec = self.nn_.kneighbors(
-                        X_class, n_neighbors=target_stats[class_minority]
-                    )
-                    index_target_class = self._selection_dist_based(
-                        X,
-                        y,
-                        dist_vec,
-                        n_samples,
-                        target_class,
-                        sel_strategy="nearest",
-                    )
-    
-    
-    if version == 3:
-    
-      self.nn_ver3_.fit(X_class)
-                    dist_vec, idx_vec = self.nn_ver3_.kneighbors(
-                        _safe_indexing(X, minority_class_indices)
-                    )
-                    idx_vec_farthest = np.unique(idx_vec.reshape(-1))
-                    X_class_selected = _safe_indexing(X_class, idx_vec_farthest)
-                    y_class_selected = _safe_indexing(y_class, idx_vec_farthest)
 
-                    dist_vec, idx_vec = self.nn_.kneighbors(
-                        X_class_selected, n_neighbors=self.nn_.n_neighbors
-                    )
-                    index_target_class = self._selection_dist_based(
-                        X_class_selected,
-                        y_class_selected,
-                        dist_vec,
-                        n_samples,
-                        target_class,
-                        sel_strategy="farthest",
-                    )
-                    # idx_tmp is relative to the feature selected in the
-                    # previous step and we need to find the indirection
-                    index_target_class = idx_vec_farthest[index_target_class]
+    ## rename feature headers to originals
+    data_new.columns = feat_names
     
-  
-  return data_new
+    ## restore response variable y to original position
+    if y_col < d - 1:
+        cols = list(range(d))
+        cols[y_col], cols[d - 1] = cols[d - 1], cols[y_col]
+        data_new = data_new[data_new.columns[cols]]
     
+    ## restore original data types
+    for j in range(d):
+        data_new.iloc[:, j] = data_new.iloc[:, j].astype(feat_dtypes_orig[j])
+    
+    ## return modified training set
+    return data_new

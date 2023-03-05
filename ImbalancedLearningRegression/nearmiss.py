@@ -8,7 +8,7 @@ from sklearn.neighbors import KNeighborsClassifier
 # load dependencies - internal
 from ImbalancedLearningRegression.phi import phi
 from ImbalancedLearningRegression.phi_ctrl_pts import phi_ctrl_pts
-from ImbalancedLearningRegression.under_sampling_enn import under_sampling_enn
+from ImbalancedLearningRegression.under_sampling_nearmiss import under_sampling_nearmiss
 # from phi import phi
 # from phi_ctrl_pts import phi_ctrl_pts
 # from under_sampling_enn import under_sampling_enn

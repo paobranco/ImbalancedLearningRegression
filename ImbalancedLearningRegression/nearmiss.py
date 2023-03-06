@@ -3,7 +3,6 @@
 ## load dependencies - third party
 import numpy as np
 import pandas as pd
-from sklearn.neighbors import KNeighborsClassifier
 
 # load dependencies - internal
 from ImbalancedLearningRegression.phi import phi
@@ -14,7 +13,7 @@ from ImbalancedLearningRegression.under_sampling_nearmiss import under_sampling_
 # from under_sampling_enn import under_sampling_enn
 
 ## majority under-sampling technique for regression with edited nearest neighbor
-def enn(
+def nearmiss(
     
     ## main arguments / inputs
     data,                     ## training set (pandas dataframe)
@@ -31,13 +30,6 @@ def enn(
     rel_coef = 1.5,           ## coefficient for box plot (pos real)
     rel_ctrl_pts_rg = None,   ## input for "manual" rel method  (2d array)
 
-    ## KNeighborsClassifier attribute
-    k = 3,                    ## the number of neighbors used for K-NN
-    n_jobs = 1,               ## the number of parallel jobs to run for neighbors search
-
-    ## user-defined KNeighborsClassifier
-    k_neighbors_classifier = None  ## user-defined estimator allowing more non-default attributes
-                                   ## will ignore k and n_jobs values if not None
     ):
     
     """
@@ -96,14 +88,6 @@ def enn(
     if rel_thres > 1 or rel_thres <= 0:
         raise ValueError("rel_thres must be a real number number: 0 < R < 1")
 
-    ## quality check for k
-    if type(k) != int or k <= 0:
-        raise ValueError("k must be a positive integer")
-
-    ## quality check for n_jobs
-    if type(n_jobs) != int:
-        raise ValueError("n_jobs must be an integer")
-    
     ## store data dimensions
     n = len(data)
     d = len(data.columns)
@@ -133,9 +117,7 @@ def enn(
     y_sort = y.sort_values(by = d - 1)
     y_sort = y_sort[d - 1]
 
-    ## k-NN classifier
-    estimator = KNeighborsClassifier(n_neighbors = k, n_jobs = n_jobs) if k_neighbors_classifier == None else k_neighbors_classifier
-    
+   
     ## -------------------------------- phi --------------------------------- ##
     ## calculate parameters for phi relevance function
     ## (see 'phi_ctrl_pts()' function for details)
@@ -225,14 +207,12 @@ def enn(
 
         ## under-sampling
         if s_perc[i] < 1:
-            
-            ## edit observations in training set
+        
             ## considered 'majority'
-            ## (see 'under__sampling_enn()' function for details)
+            ## (see 'under__sampling_nearmiss()' function for details)
             undersamp_obs = under_sampling_nearmiss(
                 data = data.copy(),
                 index = list(b_index[i].index),
-                estimator = estimator,
                 rare_indices = rare_indices,
                 version = version
             )
@@ -240,8 +220,6 @@ def enn(
             ## concatenate over-sampling
             ## results to modified training set
             data_new = pd.concat([undersamp_obs, data_new], ignore_index = True)
-
-    
 
 
     ## rename feature headers to originals

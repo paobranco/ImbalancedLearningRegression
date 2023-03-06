@@ -4,6 +4,7 @@ import pandas as pd
 import random as rd
 from tqdm import tqdm
 from sklearn.preprocessing import MinMaxScaler
+from sklearn.neighbors import KNeighborsClassifier
 
 
 ## edit normal observations
@@ -12,14 +13,13 @@ def under_sampling_nearmiss(
     ## arguments / inputs
     data,           ## training set
     index,          ## index of input data
-    estimator,      ## KNN classifier
-    rare_indices    ## indices of samples in the minority set
-    
+    rare_indices,    ## indices of samples in the minority set
+    version          ## which version of nearmiss undersampling is being used
     ):
     
     """
     under-sample observations and is the primary function underlying the
-    under-sampling technique utilized in the higher main function 'enn()', the
+    under-sampling technique utilized in the higher main function 'nearmiss()', the
     4 step procedure for generating synthetic observations is:
     
     1) pre-processing: label encodes nominal / categorical features, and subsets 
@@ -61,6 +61,7 @@ def under_sampling_nearmiss(
     ## store dimensions of data subset
     n = len(data)
     d = len(data.columns)
+    r_i = len(rare_indices)
     
     ## store original data types
     feat_dtypes_orig = [None] * d
@@ -125,12 +126,34 @@ def under_sampling_nearmiss(
     feat_count_num = len(feat_list_num)
     feat_count_nom = len(feat_list_nom)
 
+
+    if version == 1:
+        estimator = KNeighborsClassifier(n_neighbors = 3, n_jobs = 1)
+    
+    elif version == 2:
+        print(2)
+    else:
+        estimator = KNeighborsClassifier(n_neighbors = r_i, n_jobs = 1)
+
+
+
+    print(rare_indices)
+
+
+
+
+
     ## indices of results
     chosen_indices = list()
 
     ## list representations
     data_X = data.iloc[:,:(d-1)].values.tolist()
     class_y = [(1 if i in rare_indices else 0) for i in range(n)]
+
+
+
+
+
 
     ## loop through the majority set
     for i in index:

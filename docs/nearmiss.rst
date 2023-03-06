@@ -45,4 +45,4 @@ Examples
 
     >>> from ImbalancedLearningRegression import nearmiss
     >>> housing = pandas.read_csv("https://raw.githubusercontent.com/paobranco/ImbalancedLearningRegression/master/data/housing.csv")
-    >>> housing_repeated_enn = nearmiss(data = housing, y = "SalePrice", version=1)
+    >>> housing_nearmiss = nearmiss(data = housing, y = "SalePrice", version=1)

@@ -19,44 +19,7 @@ def under_sampling_nearmiss(
     ):
     
     """
-    under-sample observations and is the primary function underlying the
-    under-sampling technique utilized in the higher main function 'nearmiss()', the
-    4 step procedure for generating synthetic observations is:
-    
-    1) pre-processing: label encodes nominal / categorical features, and subsets 
-    the training set into two data sets by data type: numeric / continuous, and 
-    nominal / categorical
-    
-    2) under-sampling: ENN, which apply ENN rule to choose a subset of a majority 
-    dataset, whose target values agree with K-NN prediction
-    
-    3) post processing: restores original values for label encoded features, 
-    converts any interpolated negative values to zero in the case of non-negative 
-    features
-    
-    returns a pandas dataframe containing synthetic observations of the training
-    set which are then returned to the higher main function 'enn()'
-    
-    ref:
-    
-    Branco, P., Torgo, L., Ribeiro, R. (2017).
-    SMOGN: A Pre-Processing Approach for Imbalanced Regression.
-    Proceedings of Machine Learning Research, 74:36-50.
-    http://proceedings.mlr.press/v74/branco17a/branco17a.pdf.
-    
-    Branco, P., Ribeiro, R., Torgo, L. (2017). 
-    Package 'UBL'. The Comprehensive R Archive Network (CRAN).
-    https://cran.r-project.org/web/packages/UBL/UBL.pdf.
-    Branco, P., Torgo, L., & Ribeiro, R. P. (2019). 
-    Pre-processing approaches for imbalanced distributions in regression. 
-    Neurocomputing, 343, 76-99. 
-    https://www.sciencedirect.com/science/article/abs/pii/S0925231219301638
-    Wilson, D. L. (1972). 
-    Asymptotic properties of nearest neighbor rules using edited data. 
-    IEEE Transactions on Systems, Man, and Cybernetics, (3), 408-421.
-    https://ieeexplore.ieee.org/abstract/document/4309137
-    Kunz, N., (2019). SMOGN. 
-    https://github.com/nickkunz/smogn
+   
     """
 
     ## store dimensions of data subset
@@ -185,6 +148,10 @@ def under_sampling_nearmiss(
         if predict_y == 0:
             chosen_indices.append(i)
 
+
+
+    #dont need predict
+    # fit gives list of distances 
             
     ## indices of results
     chosen_indices = list()

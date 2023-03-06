@@ -135,37 +135,16 @@ def under_sampling_nearmiss(
     if version == 1:
         estimator = KNeighborsClassifier(n_neighbors = 3, n_jobs = 1)
 
-        ## loop through the majority set
-        for i in index:
-            train_X = data_X[:i] + data_X[i+1:]
-            train_y = class_y[:i] + class_y[i+1:]
-            min_max_scaler = MinMaxScaler()
-            train_X_minmax = min_max_scaler.fit_transform(train_X)
-            estimator.fit(train_X_minmax, train_y)
-            predict_X = min_max_scaler.transform(data.iloc[i,:(d-1)].values.reshape(1,-1))
-            predict_y = estimator.predict(predict_X)
-            if predict_y == 0:
-                chosen_indices.append(i)
                 
     # calculate list of distances to 3 furthest minority samples from majority point, then undersample
     elif version == 2:
 
+        # creats estimator of all n nearest distances, as well as the nearest n-3 distances, then 
+        # uses the difference in lists to know the 3 furthest distances
         estimator1 = KNeighborsClassifier(n_neighbors = r_i, n_jobs = 1)
         estimator2 = KNeighborsClassifier(n_neighbors = r_i - 3, n_jobs = 1)
-
-        estimator = (list(set(estimator1) - set(estimator2)))
+        estimator = list(set(estimator1) - set(estimator2))
         
-
-        for i in index:
-            train_X = data_X[:i] + data_X[i+1:]
-            train_y = class_y[:i] + class_y[i+1:]
-            min_max_scaler = MinMaxScaler()
-            train_X_minmax = min_max_scaler.fit_transform(train_X)
-            estimator.fit(train_X_minmax, train_y)
-            predict_X = min_max_scaler.transform(data.iloc[i,:(d-1)].values.reshape(1,-1))
-            predict_y = estimator.predict(predict_X)
-            if predict_y == 0:
-                chosen_indices.append(i)
 
         """
         dist_matrix = np.ndarray(shape = (n, n))
@@ -191,20 +170,22 @@ def under_sampling_nearmiss(
     else:
         estimator = KNeighborsClassifier(n_neighbors = r_i, n_jobs = 1)
 
-        ## loop through the majority set
-        for i in index:
-            train_X = data_X[:i] + data_X[i+1:]
-            train_y = class_y[:i] + class_y[i+1:]
-            min_max_scaler = MinMaxScaler()
-            train_X_minmax = min_max_scaler.fit_transform(train_X)
-            estimator.fit(train_X_minmax, train_y)
-            predict_X = min_max_scaler.transform(data.iloc[i,:(d-1)].values.reshape(1,-1))
-            predict_y = estimator.predict(predict_X)
-            if predict_y == 0:
-                chosen_indices.append(i)
+        
 
 
+    ## loop through the majority set
+    for i in index:
+        train_X = data_X[:i] + data_X[i+1:]
+        train_y = class_y[:i] + class_y[i+1:]
+        min_max_scaler = MinMaxScaler()
+        train_X_minmax = min_max_scaler.fit_transform(train_X)
+        estimator.fit(train_X_minmax, train_y)
+        predict_X = min_max_scaler.transform(data.iloc[i,:(d-1)].values.reshape(1,-1))
+        predict_y = estimator.predict(predict_X)
+        if predict_y == 0:
+            chosen_indices.append(i)
 
+            
     ## indices of results
     chosen_indices = list()
 

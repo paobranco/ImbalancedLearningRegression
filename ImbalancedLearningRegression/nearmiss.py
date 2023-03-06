@@ -42,6 +42,14 @@ def nearmiss(
     
     ref:
     
+    I. Mani, I. Zhang. “kNN approach to unbalanced data distributions: 
+    a case study involving information extraction,” In Proceedings of 
+    workshop on learning from imbalanced datasets, 2003.
+
+    Mqadi, Nhlakanipho Michael, et al. “Solving Misclassification of the
+      Credit Card Imbalance Problem Using near Miss.” Mathematical Problems
+        in Engineering, vol. 2021, 19 July 2021, pp. 1–16,
+
     Branco, P., Torgo, L., Ribeiro, R. (2017).
     SMOGN: A Pre-Processing Approach for Imbalanced Regression.
     Proceedings of Machine Learning Research, 74:36-50.

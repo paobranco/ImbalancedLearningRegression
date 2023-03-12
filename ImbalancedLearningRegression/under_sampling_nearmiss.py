@@ -15,7 +15,8 @@ def under_sampling_nearmiss(
     data,           ## training set
     index,          ## index of input data
     rare_indices,    ## indices of samples in the minority set
-    version          ## which version of nearmiss undersampling is being used
+    version,          ## which version of nearmiss undersampling is being used
+    perc              ## percentage of each bin to be undersampled
     ):
     
     """
@@ -25,7 +26,6 @@ def under_sampling_nearmiss(
     ## store dimensions of data subset
     n = len(data)
     d = len(data.columns)
-    r_i = len(rare_indices)
     
     ## store original data types
     feat_dtypes_orig = [None] * d
@@ -90,81 +90,63 @@ def under_sampling_nearmiss(
     feat_count_num = len(feat_list_num)
     feat_count_nom = len(feat_list_nom)
 
-    
-    print(rare_indices)
+
+######################################################################################
+
+    rare = [] # array of the values of all rare indices
+    for i in rare_indices:
+        if(rare_indices[i] == 1):
+            rare.append(data.iloc[i])
 
 
-    # undersample points with minimum av distance to 3 nearest neighbors
-    if version == 1:
-        estimator = KNeighborsClassifier(n_neighbors = 3, n_jobs = 1)
-
-                
-    # calculate list of distances to 3 furthest minority samples from majority point, then undersample
-    elif version == 2:
-
-        # creats estimator of all n nearest distances, as well as the nearest n-3 distances, then 
-        # uses the difference in lists to know the 3 furthest distances
-        estimator1 = KNeighborsClassifier(n_neighbors = r_i, n_jobs = 1)
-        estimator2 = KNeighborsClassifier(n_neighbors = r_i - 3, n_jobs = 1)
-        estimator = list(set(estimator1) - set(estimator2))
-        
-
-        """
-        dist_matrix = np.ndarray(shape = (n, n))
-    
-        for i in tqdm(range(n), ascii = True, desc = "dist_matrix"):
-            for j in range(n):
-                
-                ## utilize euclidean distance given that 
-                ## data is all numeric / continuous
-                if feat_count_nom == 0:
-                    dist_matrix[i][j] = euclidean_dist(
-                        a = data_num.iloc[i],
-                        b = data_num.iloc[j],
-                        d = feat_count_num
-                    )
-                
-        furthest = dist_matrix[-3:]
-        """
-
-
-
-    # undersample points with minimum av distance to all nearest neighbors
-    else:
-        estimator = KNeighborsClassifier(n_neighbors = r_i, n_jobs = 1)
-
-        
-
+    dist_matrix = np.ndarray(shape = (n, n)) # all distances from each majority point to every minority point
+    av_dist = []
 
     ## loop through the majority set
     for i in index:
-        train_X = data_X[:i] + data_X[i+1:]
-        train_y = class_y[:i] + class_y[i+1:]
-        min_max_scaler = MinMaxScaler()
-        train_X_minmax = min_max_scaler.fit_transform(train_X)
-        estimator.fit(train_X_minmax, train_y)
-        predict_X = min_max_scaler.transform(data.iloc[i,:(d-1)].values.reshape(1,-1))
-        predict_y = estimator.predict(predict_X)
-        if predict_y == 0:
-            chosen_indices.append(i)
+        for j in rare:
+            dist_matrix[i][j] = (abs(data.iloc[i [:,-1]] - rare[i [:,-1]] ), i)
 
 
+    if version == 1:
+        for i in index:
+            closest = sorted(dist_matrix[i])[:3]
 
-    #dont need predict
-    # fit gives list of distances 
-            
+            av_dist[i] = (closest[0] + closest[1] + closest[2]) / 3 # 3 closest rare values 
+
+    elif version == 2:
+        for i in index:
+            closest = sorted(dist_matrix[i])[-3:]
+
+            av_dist[i] = (closest[0] + closest[1] + closest[2]) / 3 # 3 farthest rare values
+
+    else:
+        for i in index:
+            closest = sum(dist_matrix[i]) # all rare values
+
+            av_dist[i] = closest / len(rare)
+
+
+    np.argsort(av_dist) # sorts average distances by index
+
     ## indices of results
-    chosen_indices = list()
+    chosen_indices = list() #list of samples that will be kept
 
-    ## list representations
-    data_X = data.iloc[:,:(d-1)].values.tolist()
-    class_y = [(1 if i in rare_indices else 0) for i in range(n)]
+    n_under = int(len(index)  * perc)   ## number of samples to be removed - referenced from under_sampling_random
+
+    for i in index: # for all indices in majority set
+        if i > n_under: # dont select indices that should be removed
+            chosen_indices.append(av_dist[i]) # index of majority sample with smallest average distance
 
 
     ## conduct under sampling and store modified training set
     data_new = pd.DataFrame()
     data_new = pd.concat([data.iloc[chosen_indices], data_new], ignore_index = True)
     
+
+    #############################################################################################
+
+
     ## replace label encoded values with original values
     for j in feat_list_nom:
         code_list = data.iloc[:, j].unique()

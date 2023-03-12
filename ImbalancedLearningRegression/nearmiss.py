@@ -5,12 +5,10 @@ import numpy as np
 import pandas as pd
 
 # load dependencies - internal
-from ImbalancedLearningRegression.phi import phi
-from ImbalancedLearningRegression.phi_ctrl_pts import phi_ctrl_pts
-from ImbalancedLearningRegression.under_sampling_nearmiss import under_sampling_nearmiss
-# from phi import phi
-# from phi_ctrl_pts import phi_ctrl_pts
-# from under_sampling_enn import under_sampling_enn
+from under_sampling_nearmiss import under_sampling_nearmiss
+from phi import phi
+from phi_ctrl_pts import phi_ctrl_pts
+from under_sampling_enn import under_sampling_enn
 
 ## majority under-sampling technique for regression with edited nearest neighbor
 def nearmiss(
@@ -22,6 +20,8 @@ def nearmiss(
     samp_method = "balance",  ## over / under sampling ("balance" or extreme")
     drop_na_col = True,       ## auto drop columns with nan's (bool)
     drop_na_row = True,       ## auto drop rows with nan's (bool)         
+    manual_perc = False,      ## user defines percentage of under-sampling # added
+    perc_u = -1,    
   
     ## phi relevance function arguments / inputs
     rel_thres = 0.5,          ## relevance threshold considered rare (pos real)
@@ -95,6 +95,15 @@ def nearmiss(
     
     if rel_thres > 1 or rel_thres <= 0:
         raise ValueError("rel_thres must be a real number number: 0 < R < 1")
+    
+    ## quality check for sampling percentage
+    if manual_perc:
+        if perc_u == -1:
+            raise ValueError("cannot proceed: require percentage of under-sampling if manual_perc == True")
+        if perc_u <= 0:
+            raise ValueError("percentage of under-sampling must be a positve real number")
+        if perc_u >= 1:
+            raise ValueError("percentage of under-sampling must be less than 1")
 
     ## store data dimensions
     n = len(data)
@@ -222,10 +231,11 @@ def nearmiss(
                 data = data.copy(),
                 index = list(b_index[i].index),
                 rare_indices = rare_indices,
-                version = version
+                version = version,
+                perc = s_perc[i] if not manual_perc else perc_u,  # modified
             )
             
-            ## concatenate over-sampling
+            ## concatenate under-sampling
             ## results to modified training set
             data_new = pd.concat([undersamp_obs, data_new], ignore_index = True)
 

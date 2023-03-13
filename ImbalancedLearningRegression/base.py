@@ -4,11 +4,13 @@ from pandas import DataFrame
 class BaseSampler(ABC):
 
     def __init__(self, data: DataFrame, response_variable: str, drop_na_row: bool = True, drop_na_col: bool = True,
-                 rel_thres: float = 0.5, rel_method: str = "auto", rel_xtrm_type: str = "both", rel_coef: float = 1.5, 
-                 rel_ctrl_pts_rg: list[list[float]] = None) -> None:
+                 samp_method: str = "balance", rel_thres: float = 0.5, rel_method: str = "auto", rel_xtrm_type: str = "both", 
+                 rel_coef: float = 1.5, rel_ctrl_pts_rg: list[list[float]] = None) -> None:
+        
         self.data              = data
         self.drop_na_row       = drop_na_row 
         self.drop_na_col       = drop_na_col 
+        self.samp_method       = samp_method
         self.response_variable = response_variable
 
         self.rel_thres       = rel_thres 
@@ -45,6 +47,16 @@ class BaseSampler(ABC):
         if not isinstance(data, DataFrame):
             raise TypeError("data must be a Pandas Dataframe.")
         self._data = data
+
+    @property
+    def samp_method(self) -> str:
+        return self._samp_method
+
+    @samp_method.setter
+    def samp_method(self, samp_method: str) -> None:
+        if not isinstance(samp_method, str):
+            raise TypeError("samp_method must be a string.")
+        self._samp_method = samp_method
 
     @property 
     def response_variable(self) -> str:

@@ -19,6 +19,7 @@ from ImbalancedLearningRegression.smote import smote
 from ImbalancedLearningRegression.adasyn import adasyn
 from ImbalancedLearningRegression.random_under import random_under
 from ImbalancedLearningRegression.tomeklinks import tomeklinks
+from ImbalancedLearningRegression.borderline_svm_smote import borderline_svm_smote
 
 
 
@@ -35,5 +36,6 @@ __all__ = [
     "smote",
     "adasyn",
     "random_under",
-    "tomeklinks"
+    "tomeklinks",
+    "borderline_svm_smote"
 ]

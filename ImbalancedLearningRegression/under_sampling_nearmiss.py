@@ -110,13 +110,13 @@ def under_sampling_nearmiss(
 
     if version == 1:
         for i in index:
-            closest = sorted(dist_matrix[i])[:3]
+            closest = sorted(dist_matrix[i])[:2]
 
             av_dist[i] = (closest[0] + closest[1] + closest[2]) / 3 # 3 closest rare values 
 
     elif version == 2:
         for i in index:
-            closest = sorted(dist_matrix[i])[-3:]
+            closest = sorted(dist_matrix[i])[-2:]
 
             av_dist[i] = (closest[0] + closest[1] + closest[2]) / 3 # 3 farthest rare values
 

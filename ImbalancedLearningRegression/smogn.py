@@ -3,9 +3,9 @@ import numpy as np
 import pandas as pd
 
 ## load dependencies - internal
-from smogn.phi import phi
-from smogn.phi_ctrl_pts import phi_ctrl_pts
-from smogn.over_sampling import over_sampling
+from ImbalancedLearningRegression.phi import phi
+from ImbalancedLearningRegression.phi_ctrl_pts import phi_ctrl_pts
+from ImbalancedLearningRegression.over_sampling_smogn import over_sampling_smogn
 
 ## synthetic minority over-sampling technique for regression with gaussian noise 
 def smogn(
@@ -238,7 +238,7 @@ def smogn(
             ## generate synthetic observations in training set
             ## considered 'minority'
             ## (see 'over_sampling()' function for details)
-            synth_obs = over_sampling(
+            synth_obs = over_sampling_smogn(
                 data = data,
                 index = list(b_index[i].index),
                 perc = s_perc[i],

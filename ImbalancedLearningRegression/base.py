@@ -30,15 +30,15 @@ class BaseSampler(ABC):
         if self.data.isnull().values.any():
             raise ValueError("cannot proceed: data cannot contain NaN values")
 
-    def _validate_type(self, value: Any, dtype: Any, msg: str) -> None:
-        if not isinstance(value, dtype):
+    def _validate_type(self, value: Any, dtype: tuple[type, ...], msg: str) -> None:
+        if type(value) not in dtype:
             raise TypeError(msg)
 
-    def _validate_data(self, data: Any) -> None:
-        self._validate_type(value = data, dtype = DataFrame, msg = "data must be a Pandas Dataframe.")
+    def _validate_data(self, data: DataFrame) -> None:
+        self._validate_type(value = data, dtype = (DataFrame, ), msg = "data must be a Pandas Dataframe.")
 
-    def _validate_response_variable(self, response_variable: Any) -> None:
-        self._validate_type(value = response_variable, dtype = str, msg = "response_variable must be a string.")
+    def _validate_response_variable(self, response_variable: str) -> None:
+        self._validate_type(value = response_variable, dtype = (str, ), msg = "response_variable must be a string.")
 
         if response_variable in self.data.columns.values is False:
             raise ValueError("cannot proceed: response_variable must be a header name (string) \
@@ -104,7 +104,7 @@ class BaseSampler(ABC):
 
     @samp_method.setter
     def samp_method(self, samp_method: SAMPLE_METHOD) -> None:
-        self._validate_type(value = samp_method, dtype = SAMPLE_METHOD, msg = f"samp_method must be an enum of type SAMPLE_METHOD. Passed: {samp_method}")
+        self._validate_type(value = samp_method, dtype = (SAMPLE_METHOD, ), msg = f"samp_method must be an enum of type SAMPLE_METHOD. Passed: '{samp_method}'")
         self._samp_method = samp_method
 
     @property 
@@ -113,7 +113,7 @@ class BaseSampler(ABC):
 
     @drop_na_row.setter
     def drop_na_row(self, drop_na_row: bool) -> None:
-        self._validate_type(value = drop_na_row, dtype = bool, msg = f"drop_na_row must be a boolean. Passed: {drop_na_row}")
+        self._validate_type(value = drop_na_row, dtype = (bool, ), msg = f"drop_na_row must be a boolean. Passed: '{drop_na_row}'")
         self._drop_na_row = drop_na_row
 
     @property
@@ -122,7 +122,7 @@ class BaseSampler(ABC):
 
     @drop_na_col.setter
     def drop_na_col(self, drop_na_col: bool) -> None:
-        self._validate_type(value = drop_na_col, dtype = bool, msg = f"drop_na_col must be a boolean. Passed: {drop_na_col}")
+        self._validate_type(value = drop_na_col, dtype = (bool, ), msg = f"drop_na_col must be a boolean. Passed: '{drop_na_col}'")
         self._drop_na_col = drop_na_col
 
     @property 
@@ -131,10 +131,10 @@ class BaseSampler(ABC):
 
     @rel_thres.setter
     def rel_thres(self, rel_thres: float) -> None:
-        self._validate_type(value = rel_thres, dtype = float, msg = f"rel_thresh must be a float. Passed: {rel_thres}")
+        self._validate_type(value = rel_thres, dtype = (float, ), msg = f"rel_thresh must be a float. Passed: '{rel_thres}'")
             
         if rel_thres > 1 or rel_thres <= 0:
-            raise ValueError(f"rel_thres must be a real number number: 0 < R < 1. Passed: {rel_thres}")
+            raise ValueError(f"rel_thres must be a real number number: 0 < R < 1. Passed: '{rel_thres}'")
         self._rel_thres = rel_thres
 
     @property
@@ -143,7 +143,7 @@ class BaseSampler(ABC):
 
     @rel_method.setter
     def rel_method(self, rel_method: RELEVANCE_METHOD) -> None:
-        self._validate_type(value = rel_method, dtype = RELEVANCE_METHOD, msg = f"rel_method must be an enum of type RELEVANCE_METHOD. Passed: {rel_method}")
+        self._validate_type(value = rel_method, dtype = (RELEVANCE_METHOD, ), msg = f"rel_method must be an enum of type RELEVANCE_METHOD. Passed: '{rel_method}'")
         self._rel_method = rel_method
 
     @property
@@ -152,7 +152,7 @@ class BaseSampler(ABC):
 
     @rel_xtrm_type.setter
     def rel_xtrm_type(self, rel_xtrm_type: RELEVANCE_XTRM_TYPE) -> None:
-        self._validate_type(value = rel_xtrm_type, dtype = RELEVANCE_XTRM_TYPE, msg = f"rel_xtrm_type must be an enum of type RELEVANCE_XTRM_TYPE. Passed: {rel_xtrm_type}")
+        self._validate_type(value = rel_xtrm_type, dtype = (RELEVANCE_XTRM_TYPE, ), msg = f"rel_xtrm_type must be an enum of type RELEVANCE_XTRM_TYPE. Passed: '{rel_xtrm_type}'")
         self._rel_xtrm_type = rel_xtrm_type
 
     @property
@@ -161,7 +161,7 @@ class BaseSampler(ABC):
 
     @rel_coef.setter
     def rel_coef(self, rel_coef: float | int) -> None:
-        self._validate_type(value = rel_coef, dtype = (float, int), msg = f"rel_coef must be a float or int. Passed: {rel_coef}")
+        self._validate_type(value = rel_coef, dtype = (float, int), msg = f"rel_coef must be a float or int. Passed: '{rel_coef}'")
         self._rel_coef = rel_coef
 
     @property 
@@ -171,11 +171,11 @@ class BaseSampler(ABC):
     @rel_ctrl_pts_rg.setter
     def rel_ctrl_pts_rg(self, rel_ctrl_pts_rg: list[list[float | int]] | None) -> None:
         if rel_ctrl_pts_rg is not None:
-            self._validate_type(value = rel_ctrl_pts_rg, dtype = list, msg = "rel_ctrl_pts_rg must be 'None' or a 2D array of floats.")
+            self._validate_type(value = rel_ctrl_pts_rg, dtype = (list, ), msg = "rel_ctrl_pts_rg must be 'None' or a 2D array of floats.")
             if len(rel_ctrl_pts_rg) == 0:
                 raise TypeError(f"rel_ctrl_pts_rg must be 'None' or a 2D array of floats. You passed an empty 1D array.")
             for pts in rel_ctrl_pts_rg:
-                self._validate_type(value = pts, dtype = list, msg = "rel_ctrl_pts_rg must be 'None' or a 2D array of floats.")
-                all(self._validate_type(value = pt, dtype = (float, int), 
-                msg = f"rel_ctrl_pts_rg must be 'None' or a 2D array of floats. Contains element: {pt}") for pt in pts)
+                self._validate_type(value = pts, dtype = (list, ), msg = f"rel_ctrl_pts_rg must be 'None' or a 2D array of floats. Passed: '{pts}'")
+                any(self._validate_type(value = pt, dtype = (float, int), 
+                msg = f"rel_ctrl_pts_rg must be 'None' or a 2D array of floats. Contains element: '{pt}'") for pt in pts)
         self._rel_ctrl_pts_rg = rel_ctrl_pts_rg

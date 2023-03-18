@@ -38,7 +38,6 @@ def smogn_boost(T, data, perc, pert, replace, y, threshold):
 
         # this is to call the decision tree and use it to achieve a new model, predict regression value for y (target response variable), and return the predicted values
         dt_data = tree.DecisionTreeRegressor()
-        
         dt_data_predictions = dt_data.predict(dt_over_sampled, y)
 
         #initialize error rate

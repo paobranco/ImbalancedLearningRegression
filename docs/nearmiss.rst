@@ -9,7 +9,7 @@ Nearmiss is an under-sampling method that....
    :param data: Pandas dataframe, the dataset to re-sample.
    :type data: :term:`Pandas dataframe`
    :param str y: Column name of the target variable in the Pandas dataframe.
-   :param int version: Selects which of 3 versions will be used to near-miss undersample the data. The       versions behave as follows:
+   :param int version: Selects which of 3 versions will be used to undersample the data. The versions select the samples to be removed and behave as follows:
    
    NearMiss-1: Majority class examples with minimum average distance to three closest minority class examples.
    NearMiss-2: Majority class examples with minimum average distance to three furthest minority class examples.
@@ -18,6 +18,8 @@ Nearmiss is an under-sampling method that....
    :param str samp_method: Method to determine re-sampling percentage. Either ``balance`` or ``extreme``.
    :param bool drop_na_col: Determine whether or not automatically drop columns containing NaN values. The data frame should not contain any missing values, so it is suggested to keep it as default.
    :param bool drop_na_row: Determine whether or not automatically drop rows containing NaN values. The data frame should not contain any missing values, so it is suggested to keep it as default.
+   :param bool manual_perc: Keep the same percentage of re-sampling for all bins. If ``True``, ``perc_u`` is required to be a real number between 0 and 1 (0, 1).
+   :param float perc_u: User-specified fixed percentage of under-sampling for all bins. Must be a real number between 0 and 1 (0, 1) if ``manual_perc = True``.
    :param float rel_thres: Relevance threshold, above which a sample is considered rare. Must be a real number between 0 and 1 (0, 1].
    :param str rel_method: Method to define the relevance function, either ``auto`` or ``manual``. If ``manual``, must specify ``rel_ctrl_pts_rg``.
    :param str rel_xtrm_type: Distribution focus, ``high``, ``low``, or ``both``. If ``high``, rare cases having small y values will be considerd as normal, and vise versa.

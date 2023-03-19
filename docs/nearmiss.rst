@@ -1,7 +1,7 @@
 Nearmiss Undersampling
 ========================================================
 
-Nearmiss is an under-sampling method that....
+Nearmiss is an under-sampling method that selects majority class samples and removes them based on their calculated distances between minority points. Nearmiss can be applied in 3 different ways, as described below by "version".
 
 .. py:function:: nearmiss(data, y, samp_method = "balance", drop_na_col = True, drop_na_row = True, rel_thres = 0.5, rel_method = "auto", rel_xtrm_type = "both", rel_coef = 1.5, rel_ctrl_pts_rg = None, k = 3, n_jobs = 1, k_neighbors_classifier = None)
 

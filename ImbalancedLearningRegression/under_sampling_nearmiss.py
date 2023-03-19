@@ -91,8 +91,6 @@ def under_sampling_nearmiss(
     feat_count_nom = len(feat_list_nom)
 
 
-######################################################################################
-
     rare = [] # array of the values of all rare indices
     for i in rare_indices:
         if(rare_indices[i] == 1):
@@ -110,13 +108,13 @@ def under_sampling_nearmiss(
 
     if version == 1:
         for i in index:
-            closest = sorted(dist_matrix[i])[:2]
+            closest = sorted(dist_matrix[i])[:3]
 
             av_dist[i] = (closest[0] + closest[1] + closest[2]) / 3 # 3 closest rare values 
 
     elif version == 2:
         for i in index:
-            closest = sorted(dist_matrix[i])[-2:]
+            closest = sorted(dist_matrix[i])[-3:]
 
             av_dist[i] = (closest[0] + closest[1] + closest[2]) / 3 # 3 farthest rare values
 
@@ -143,10 +141,6 @@ def under_sampling_nearmiss(
     data_new = pd.DataFrame()
     data_new = pd.concat([data.iloc[chosen_indices], data_new], ignore_index = True)
     
-
-    #############################################################################################
-
-
     ## replace label encoded values with original values
     for j in feat_list_nom:
         code_list = data.iloc[:, j].unique()

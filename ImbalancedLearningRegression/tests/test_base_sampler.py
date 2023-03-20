@@ -1,35 +1,87 @@
-import unittest
+# Third Party Imports
+from pandas import DataFrame
+
+# Standard Library Imports
+from unittest      import TestCase, main
 from unittest.mock import patch
 
+# Package Module Imports
 from ImbalancedLearningRegression.base import BaseSampler
 from ImbalancedLearningRegression.utils.enums import SAMPLE_METHOD, RELEVANCE_METHOD, RELEVANCE_XTRM_TYPE
 
-class TestBaseSampler(unittest.TestCase):
+class TestBaseSampler(TestCase):
+    def setUp(self) -> None:
+        self.p = patch.multiple(BaseSampler, __abstractmethods__=set())
+        self.p.start()
+        self.base_sampler = BaseSampler() # type: ignore
+        return super().setUp()
 
-    @classmethod
-    def setUpClass(cls) -> None:
-        p = patch.multiple(BaseSampler, __abstractmethods__=set())
-        p.start()
-        cls.base_sampler = BaseSampler() # type: ignore
+    def tearDown(self) -> None:
+        self.p.stop()
+        return super().tearDown()
 
     def test_preprocess_nan(self) -> None:   
         pass 
 
     def test_validate_data(self) -> None:
-        pass
+        self.base_sampler._validate_data(data = DataFrame())
+        with self.assertRaises(TypeError):
+            self.base_sampler._validate_data(data = 4) # type: ignore
 
     def test_validate_response_variable(self) -> None:
-        pass
+        # Test expected behavior.
+        self.base_sampler._validate_response_variable(data = DataFrame(columns = ["foobar"]), response_variable = "foobar")
+        # Test response_variable is not a str raises exception.
+        with self.assertRaises(TypeError):
+            self.base_sampler._validate_response_variable(data = DataFrame(), response_variable = -2.35) # type: ignore
+        # Test response_variable is not a column in the DataFrame.
+        with self.assertRaises(ValueError):
+            self.base_sampler._validate_response_variable(data = DataFrame(), response_variable = "foobar")
 
     def test_validate_relevance(self) -> None:
+        # Test expected bahvior.
+        self.base_sampler._validate_relevance(relevances = [0.5, 0.4])
+        # Test list of relevances is only 0s raises exception
+        with self.assertRaises(ValueError):
+            self.base_sampler._validate_relevance(relevances = [0,0,0,0])
+        # Test list of relevances is only 1s raises exception
+        with self.assertRaises(ValueError):
+            self.base_sampler._validate_relevance(relevances = [1,1,1,1])
+
+    def test_classify_data(self) -> None:
         pass
 
     def test_create_new_data(self) -> None:
         pass
-    
+
     def test_format_new_data(self) -> None:
         pass
 
+    def test_validate_type(self) -> None:
+        # Test with built-in Types
+        self.base_sampler._validate_type(value = 4, dtype = (int, ),                 msg = "Failed _validate_type test with integer as type.")
+        self.base_sampler._validate_type(value = True, dtype = (bool, ),             msg = "Failed _validate_type test with boolean as type.")
+        self.base_sampler._validate_type(value = -2.37, dtype = (float, ),           msg = "Failed _validate_type test with float as type.")
+        self.base_sampler._validate_type(value = [], dtype = (list, ),               msg = "Failed _validate_type test with list as type.")
+        self.base_sampler._validate_type(value = DataFrame(), dtype = (DataFrame, ), msg = "Failed _validate_type test with DataFrame as type.")
+
+        # Test with Package Defined Types
+        self.base_sampler._validate_type(value = SAMPLE_METHOD.BALANCE,    dtype = (SAMPLE_METHOD, ),       msg = "Failed _validate_type test with SAMPLE_METHOD as type.")
+        self.base_sampler._validate_type(value = RELEVANCE_METHOD.AUTO,    dtype = (RELEVANCE_METHOD, ),    msg = "Failed _validate_type test with RELEVANCE_METHOD as type.")
+        self.base_sampler._validate_type(value = RELEVANCE_XTRM_TYPE.BOTH, dtype = (RELEVANCE_XTRM_TYPE, ), msg = "Failed _validate_type test with RELEVANCE_XTRM_TYPE as type.")
+
+        # Test Exceptions
+        with self.assertRaises(TypeError):
+            self.base_sampler._validate_type(value = SAMPLE_METHOD.BALANCE, dtype = (int, ),                 
+            msg = "Failed _validate_type exception test with SAMPLE_METHOD compared with int as type.")
+
+        with self.assertRaises(TypeError):
+            self.base_sampler._validate_type(value = RELEVANCE_METHOD.AUTO, dtype = (SAMPLE_METHOD, ),       
+            msg = "Failed _validate_type exception test with RELEVANCE_METHOD compared with SAMPLE_METHOD as type.")
+
+        with self.assertRaises(TypeError):
+            self.base_sampler._validate_type(value = DataFrame(), dtype = (RELEVANCE_XTRM_TYPE, ), 
+            msg = "Failed _validate_type exception test with DataFrame compared with RELEVANCE_XTRM_TYPE as type.")
 
     def test_drop_na_row(self) -> None:
         self.base_sampler.drop_na_row = True
@@ -110,6 +162,5 @@ class TestBaseSampler(unittest.TestCase):
         with self.assertRaises(TypeError):
             self.base_sampler.rel_ctrl_pts_rg = [[1,2], 1, 2] # type: ignore
 
-
 if __name__ == "__main__":
-    unittest.main()
+    main()

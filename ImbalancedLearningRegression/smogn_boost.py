@@ -40,7 +40,7 @@ def smogn_boost(TotalIterations, data, perc, pert, replace, k, y, threshold):
     while iteration <= TotalIterations:
 
         # this is the initial iteration of smogn, calculating it for the bumps, giving new data oversampled
-        dt_over_sampled = smogn(data=data, y, k = 5, pert = 0.02, replace=replace,)
+        dt_over_sampled = smogn(data=data, y, k = 5, pert = pert, replace=replace,)
 
         # this is to call the decision tree and use it to achieve a new model, predict regression value for y (target response variable), and return the predicted values
         dt_model = tree.DecisionTreeRegressor()
@@ -74,7 +74,7 @@ def smogn_boost(TotalIterations, data, perc, pert, replace, k, y, threshold):
         # dt_updated = pd.concat([perc, beta], ignore_index=True)
 
         # apply normalization factor using sci kit learn
-        dt_normalized = preprocessing.normalize(dt_data, max)
+        dt_normalized = preprocessing.normalize(dt_distribution, max)
 
         # iteration count
         iteration = iteration + 1

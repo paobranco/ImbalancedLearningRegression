@@ -16,10 +16,10 @@ from ImbalancedLearningRegression.gn import gn
 # synthetic minority over-sampling technique for regression with gaussian noise with boost (based on SMOTEBoost using Adaboost)
 
 
-def smogn_boost(T, data, perc, pert, replace, y, threshold):
+def smogn_boost(TotalIterations, data, perc, pert, replace, k, y, threshold):
 
     # arguments / inputs
-    # T: number of iterations, user inputted integer value
+    # TotalIterations: number of iterations, user inputted integer value
     # data,  # training set
     # perc,  # over / under sampling
     # pert,  # perturbation / noise percentage
@@ -29,33 +29,47 @@ def smogn_boost(T, data, perc, pert, replace, y, threshold):
 
     # set an initial iteration
     iteration = 1
+    
+    # set distribution as 1/m examples, which is length of data -1, as one of them is the target variable y
+    examples = 1/(len(data)-1)
+    dt_distribution = []
+    for i in len(data):
+        dt_distribution[i] = examples
 
     # loop while iteration is less than user provided iterations
-    while iteration <= T:
+    while iteration <= TotalIterations:
 
-        # this is the initiial iteration of smogn, calculating it for the bumps, giving new data oversampled
-        dt_over_sampled = smogn(data=data, index=list(), pert=pert, replace=replace)
+        # this is the initial iteration of smogn, calculating it for the bumps, giving new data oversampled
+        dt_over_sampled = smogn(data=data, y, k = 5, pert = 0.02, replace=replace,)
 
         # this is to call the decision tree and use it to achieve a new model, predict regression value for y (target response variable), and return the predicted values
-        dt_data = tree.DecisionTreeRegressor()
-        dt_data_predictions = dt_data.predict(dt_over_sampled, y)
+        dt_model = tree.DecisionTreeRegressor()
+        
+        #check if I need to separate features and target
+        dt_model = dt_model.fit(dt_over_sampled) 
+        dt_data_predictions = dt_model.predict(y)
 
         #initialize error rate
         error = 0
 
-        # calcualte the error rate of the new model achieved earlier, as the delta between original dataset and predicted oversampled dataset
-        error = abs((dt_data[y] - dt_data_predictions[y])/dt_data[y])
-             
+        # calculate the error rate of the new model achieved earlier, as the delta between original dataset and predicted oversampled dataset
+        #for each y in the dataset, calculate whether it is greater/lower than threshold and update accordingly
+        error = abs((data[y] - dt_data_predictions[y])/data[y])
+        
+        for y in dt_data_predictions: # verify for each of the y, what is the error
+            if error > threshold:
+                error = dt_data_predictions[perc]
+                                      
         # beta is the update parameter of weights based on the error rate calculated
         beta = pow(error, 2)
-     
-        # we compare the error rate to a given threshold (by the user) and update the weight parameter based on this info
-        for y in dt_data:
-            if error <= threshold:
-                dt_data[perc] = beta
-            else:
-                dt_data[perc] = 1
 
+        # update the distribution
+        for i in dt_distribution:
+            if error <= threshold:
+                dt_distribution[i] = beta
+            else:
+                dt_distribution[i] = 1
+        
         # update distribution with new weights, weights are beta
         # dt_updated = pd.concat([perc, beta], ignore_index=True)
 

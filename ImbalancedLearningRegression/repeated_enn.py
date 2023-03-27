@@ -36,6 +36,8 @@ def repeated_enn(
     k_neighbors_classifier = None  ## user-defined estimator allowing more non-default attributes
                                    ## will ignore k and n_jobs values if not None
   ):
+    
+
     #rename attributes to be used in call to enn
     data_size = len(data) #number of samples in dataset
     ndata = data
@@ -68,10 +70,10 @@ def repeated_enn(
         count = 0
       
       data_size = len(new_enn) # update number of data points
-      data = new_enn
+      ndata = new_enn
       i = i + 1 # increment i
            
     
   
-    return new_enn
+    return ndata
     

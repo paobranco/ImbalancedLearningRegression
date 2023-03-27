@@ -93,8 +93,11 @@ def under_sampling_nearmiss(
 
     rare = [] # array of the values of all rare indices
     for i in rare_indices:
-        if(rare_indices[i] == 1):
-            rare.append(data.iloc[i])
+        try:
+            if(rare_indices[i] == 1):
+                rare.append(data.iloc[i])
+        except:
+            continue
 
 
     dist_matrix = np.ndarray(shape = (n, n)) # all distances from each majority point to every minority point

@@ -92,7 +92,7 @@ def under_sampling_nearmiss(
 
 
     rare = [] # array of the values of all rare indices
-    for i in rare_indices:
+    for i in range(len(rare_indices)):
         try:
             if(rare_indices[i] == 1):
                 rare.append(data.iloc[i])
@@ -113,19 +113,19 @@ def under_sampling_nearmiss(
         for i in index:
             closest = sorted(dist_matrix[i])[:3]
 
-            av_dist[i] = (closest[0] + closest[1] + closest[2]) / 3 # 3 closest rare values 
+            av_dist.append((closest[0] + closest[1] + closest[2]) / 3) # 3 closest rare values 
 
     elif version == 2:
         for i in index:
             closest = sorted(dist_matrix[i])[-3:]
 
-            av_dist[i] = (closest[0] + closest[1] + closest[2]) / 3 # 3 farthest rare values
+            av_dist.append((closest[0] + closest[1] + closest[2]) / 3) # 3 farthest rare values
 
     else:
         for i in index:
             closest = sum(dist_matrix[i]) # all rare values
 
-            av_dist[i] = closest / len(rare)
+            av_dist.append(closest / len(rare))
 
 
     np.argsort(av_dist) # sorts average distances by index
@@ -135,7 +135,7 @@ def under_sampling_nearmiss(
 
     n_under = int(len(index)  * perc)   ## number of samples to be removed - referenced from under_sampling_random
 
-    for i in index: # for all indices in majority set
+    for i in av_dist: # for all indices in majority set
         if i > n_under: # dont select indices that should be removed
             chosen_indices.append(av_dist[i]) # index of majority sample with smallest average distance
 

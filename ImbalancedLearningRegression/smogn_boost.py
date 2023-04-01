@@ -41,9 +41,9 @@ def smogn_boost(TotalIterations, data, pert, replace, k, y, error_threshold, rel
     for i in len(data):
         dt_distribution[i] = weights
 
-    # calling PC
-    
-    pc = phi_ctrl_pts
+    # calling phi control
+    pc = phi_ctrl_pts (y=y, method="manual", xtrm_type = "both", coeff = 1.5, ctrl_pts=any)
+    # calling the control points only from the output
     rel_ctrl_pts_rg = pc[3]
     
     # loop while iteration is less than user provided iterations

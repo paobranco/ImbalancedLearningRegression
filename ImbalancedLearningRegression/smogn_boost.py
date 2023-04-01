@@ -15,32 +15,42 @@ from ImbalancedLearningRegression.gn import gn
 
 # synthetic minority over-sampling technique for regression with gaussian noise with boost (based on SMOTEBoost using Adaboost)
 
-
-def smogn_boost(TotalIterations, data, perc, pert, replace, k, y, threshold):
+# ****need a train and a test set****
+def smogn_boost(TotalIterations, data, pert, replace, k, y, error_threshold, rel_thres, samp_method = "balance"):
 
     # arguments / inputs
     # TotalIterations: number of iterations, user inputted integer value
     # data,  # training set
-    # perc,  # over / under sampling
     # pert,  # perturbation / noise percentage
     # replace,  # sampling replacement (bool)
     # y, # response variable y by name (string)
-    # threshold:  error threshold defined by the user
+    # error_threshold:  error threshold defined by the user
+    # samp_method: "balance or extreme" - samp method is perc
+    # rel_thres: relevance threshold defined by the user
 
     # set an initial iteration
     iteration = 1
     
-    # set distribution as 1/m examples, which is length of data -1, as one of them is the target variable y
-    examples = 1/(len(data)-1)
+    # set distribution as 1/m weights, which is length of data -1, as one of them is the target variable y
+    
+    # Look at https://github.com/nunompmoniz/ReBoost/blob/master/R/Functions.R
+    # ******need to use number of rows here******
+    # convert data to data frame here
+    weights = 1/(len(data))
     dt_distribution = []
     for i in len(data):
-        dt_distribution[i] = examples
+        dt_distribution[i] = weights
 
+    # calling PC
+    
+    pc = phi_ctrl_pts
+    rel_ctrl_pts_rg = pc[3]
+    
     # loop while iteration is less than user provided iterations
     while iteration <= TotalIterations:
 
         # this is the initial iteration of smogn, calculating it for the bumps, giving new data oversampled
-        dt_over_sampled = smogn(data=data, y, k = 5, pert = pert, replace=replace,)
+        dt_over_sampled = smogn(data=data, y = y, k = 5, pert = pert, replace=replace, rel_thres = rel_thres, rel_method = "manual", rel_ctrl_pts_rg = rel_ctrl_pts_rg)
 
         # this is to call the decision tree and use it to achieve a new model, predict regression value for y (target response variable), and return the predicted values
         dt_model = tree.DecisionTreeRegressor()
@@ -56,27 +66,26 @@ def smogn_boost(TotalIterations, data, perc, pert, replace, k, y, threshold):
         #for each y in the dataset, calculate whether it is greater/lower than threshold and update accordingly
         error = abs((data[y] - dt_data_predictions[y])/data[y])
         
-        for y in dt_data_predictions: # verify for each of the y, what is the error
-            if error > threshold:
-                error = dt_data_predictions[perc]
+        for i in range(1, len[dt_data_predictions], 1):
+            if error[i] > error_threshold:
+                epsilon_t = epsilon_t + dt_distribution[i]
                                       
         # beta is the update parameter of weights based on the error rate calculated
-        beta = pow(error, 2)
+        beta = pow(epsilon_t, 2)
 
         # update the distribution
         for i in dt_distribution:
-            if error <= threshold:
-                dt_distribution[i] = beta
+            if error[i] <= error_threshold:
+                dt_distribution[i] = dt_distribution[i] * beta
             else:
-                dt_distribution[i] = 1
-        
-        # update distribution with new weights, weights are beta
-        # dt_updated = pd.concat([perc, beta], ignore_index=True)
+                dt_distribution[i] = dt_distribution[i]
 
         # apply normalization factor using sci kit learn
         dt_normalized = preprocessing.normalize(dt_distribution, max)
 
         # iteration count
         iteration = iteration + 1
+
+    # **** need to modify original data after the whole loop ****
     
     return smogn_boost

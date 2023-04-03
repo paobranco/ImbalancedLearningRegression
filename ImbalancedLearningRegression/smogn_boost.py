@@ -18,11 +18,13 @@ from ImbalancedLearningRegression.gn import gn
 # Look at https://github.com/nunompmoniz/ReBoost/blob/master/R/Functions.R
 
 # ****need a train and a test set****
-def smogn_boost(TotalIterations, data, pert, replace, k, y, error_threshold, rel_thres, samp_method = "balance"):
+def smogn_boost(data, test_data, TotalIterations, pert, replace, k, y, error_threshold, rel_thres, samp_method = "balance"):
 
     # arguments/inputs
-    # TotalIterations: user defined total number of iterations (pos int)
+    
     # data: training set
+    # test_data: test data
+    # TotalIterations: user defined total number of iterations (pos int)
     # pert: perturbation / noise percentage
     # replace: sampling replacement (bool)
     # k: num of neighs for over-sampling (pos int)
@@ -31,10 +33,34 @@ def smogn_boost(TotalIterations, data, pert, replace, k, y, error_threshold, rel
     # rel_thres: user defined relevance threshold 
     # samp_method: "balance or extreme" - sampling method is perc
 
+    # split training data set into features and target
+    ## store data dimensions
+    n = len(test_data)
+    d = len(test_data.columns)
+      
+    ## determine column position for response variable y
+    y_col = test_data.columns.get_loc(y)
+    
+    ## move response variable y to last column
+    if y_col < d - 1:
+        cols = list(range(d))
+        cols[y_col], cols[d - 1] = cols[d - 1], cols[y_col]
+        data = data[test_data.columns[cols]]
+    
+    ## store original feature headers and
+    ## encode feature headers to index position
+    feat_names = list(test_data.columns)
+    data.columns = range(d)
+    
+    ## sort response variable y by ascending order
+    y = pd.DataFrame(test_data[d - 1])
+    y_sort = y.sort_values(by = d - 1)
+    y_sort = y_sort[d - 1]
+    
     # set an initial iteration
     iteration = 1
     
-    # set distribution as 1/m weights, which is length of data -1, as one of them is the target variable y 
+    # Dt(i) set distribution as 1/m weights, which is length of data -1, as one of them is the target variable y 
     weights = 1/(len(data))
     dt_distribution = []
     for i in len(data):
@@ -53,7 +79,9 @@ def smogn_boost(TotalIterations, data, pert, replace, k, y, error_threshold, rel
         dt_over_sampled = smogn(data=data, y = y, k = 5, pert = pert, replace=replace, rel_thres = rel_thres, rel_method = "manual", rel_ctrl_pts_rg = rel_ctrl_pts_rg)
 
         # split oversampled data into a training and test set
-        # X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=1) # 70% training and 30% test
+        x = data[]
+        y = data[]
+        x_train, x_test, Y_train, Y_test = train_test_split(x, Y, test_size=0.3, random_state=1) # 70% training and 30% test
 
         # this is to call the decision tree and use it to achieve a new model, predict regression value for y (target response variable), and return the predicted values
         dt_model = tree.DecisionTreeRegressor()
@@ -88,7 +116,10 @@ def smogn_boost(TotalIterations, data, pert, replace, k, y, error_threshold, rel
 
         # iteration count
         iteration = iteration + 1
-
+        
+        # calculation for weighted sum of all T models predictions, weights proportional to inverse error rates logarithm
+        WeightSum = np.sum(dt_distribution)
+        
     # **** need to modify original data after the whole loop ****
     
     

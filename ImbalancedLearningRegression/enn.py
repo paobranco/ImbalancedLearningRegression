@@ -4,8 +4,8 @@ import pandas as pd
 from sklearn.neighbors import KNeighborsClassifier
 
 # load dependencies - internal
-from ImbalancedLearningRegression.phi import phi
-from ImbalancedLearningRegression.phi_ctrl_pts import phi_ctrl_pts
+from ImbalancedLearningRegression.utils.phi import phi
+from ImbalancedLearningRegression.utils.phi_ctrl_pts import phi_ctrl_pts
 from ImbalancedLearningRegression.under_sampling_enn import under_sampling_enn
 # from phi import phi
 # from phi_ctrl_pts import phi_ctrl_pts

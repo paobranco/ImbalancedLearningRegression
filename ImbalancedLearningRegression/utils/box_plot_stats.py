@@ -1,13 +1,19 @@
-## load dependency - third party
+## Third Party Dependencies
 import numpy as np
+from   pandas import Series
+
+## Standard Library Dependencies
+from typing import Any
+
+## Internal Dependencies
 
 ## calculate box plot statistics
 def box_plot_stats(
     
     ## arguments / inputs
-    x,          ## input array of values 
-    coef = 1.5  ## positive real number
-                ## (determines how far the whiskers extend from the iqr)
+    points: "Series[Any]",   ## input array of values 
+    coef: int | float = 1.5  ## positive real number
+                             ## (determines how far the whiskers extend from the iqr)
     ):          
     
     """ 
@@ -48,12 +54,12 @@ def box_plot_stats(
         raise ValueError("cannot proceed: coef must be greater than zero")
     
     ## convert input to numpy array
-    x = np.array(x)
+    x = np.array(points)
     
     ## determine median, lower ‘hinge’, upper ‘hinge’
-    median = np.quantile(a = x, q = 0.50, interpolation = "midpoint")
-    first_quart = np.quantile(a = x, q = 0.25, interpolation = "midpoint")
-    third_quart = np.quantile(a = x, q = 0.75, interpolation = "midpoint")
+    median = np.quantile(a = x, q = 0.50, method = "midpoint")
+    first_quart = np.quantile(a = x, q = 0.25, method = "midpoint")
+    third_quart = np.quantile(a = x, q = 0.75, method = "midpoint")
     
     ## calculate inter quartile range
     intr_quart_rng = third_quart - first_quart

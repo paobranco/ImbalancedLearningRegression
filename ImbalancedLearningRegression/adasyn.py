@@ -4,8 +4,8 @@ import pandas as pd
 from tqdm import tqdm
 
 ## load dependencies - internal
-from ImbalancedLearningRegression.phi import phi
-from ImbalancedLearningRegression.phi_ctrl_pts import phi_ctrl_pts
+from ImbalancedLearningRegression.utils.phi import phi
+from ImbalancedLearningRegression.utils.phi_ctrl_pts import phi_ctrl_pts
 from ImbalancedLearningRegression.over_sampling_adasyn import over_sampling_adasyn
 from ImbalancedLearningRegression.dist_metrics import euclidean_dist, heom_dist, overlap_dist
 

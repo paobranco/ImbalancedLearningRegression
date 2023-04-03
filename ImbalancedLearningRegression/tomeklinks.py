@@ -3,8 +3,8 @@ import numpy as np
 import pandas as pd
 
 ## load dependencies - internal
-from ImbalancedLearningRegression.phi import phi
-from ImbalancedLearningRegression.phi_ctrl_pts import phi_ctrl_pts
+from ImbalancedLearningRegression.utils.phi import phi
+from ImbalancedLearningRegression.utils.phi_ctrl_pts import phi_ctrl_pts
 from ImbalancedLearningRegression.under_sampling_tomeklinks import under_sampling_tomeklinks
 
 ##  under-sampling by removing Tomek’s links for regression

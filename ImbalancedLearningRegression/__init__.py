@@ -8,9 +8,9 @@ Imbalanced Learning for Regression
 https://github.com/paobranco/ImbalancedLearningRegression
 """
 
-from ImbalancedLearningRegression.box_plot_stats import box_plot_stats
-from ImbalancedLearningRegression.phi import phi
-from ImbalancedLearningRegression.phi_ctrl_pts import phi_ctrl_pts
+from ImbalancedLearningRegression.utils.box_plot_stats import box_plot_stats
+from ImbalancedLearningRegression.utils.phi import phi
+from ImbalancedLearningRegression.utils.phi_ctrl_pts import phi_ctrl_pts
 from ImbalancedLearningRegression.gn import gn
 from ImbalancedLearningRegression.ro import ro
 from ImbalancedLearningRegression.cnn import cnn

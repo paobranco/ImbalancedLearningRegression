@@ -1,20 +1,24 @@
-## load dependency - third party
+## Third Party Dependencies
 import numpy as np
+from   pandas import Series
 
-## load dependency - internal
-from ImbalancedLearningRegression.box_plot_stats import box_plot_stats
-# from box_plot_stats import box_plot_stats
+## Standard Library Dependencies
+from typing import Any
+
+## Internal Dependencies
+from ImbalancedLearningRegression.utils.box_plot_stats import box_plot_stats
+from ImbalancedLearningRegression.utils.models import RelevanceParameters, RELEVANCE_METHOD, RELEVANCE_XTRM_TYPE
 
 ## calculate parameters for phi relevance function
 def phi_ctrl_pts(
     
     ## arguments / inputs
-    y,                    ## response variable y
-    method = "auto",      ## relevance method ("auto" or "manual")
-    xtrm_type = "both",   ## distribution focus ("high", "low", "both")
-    coef = 1.5,           ## coefficient for box plot
-    ctrl_pts = None       ## input for "manual" rel method
-    ):
+    response_variable: "Series[Any]",                          ## response variable
+    method: RELEVANCE_METHOD = RELEVANCE_METHOD.AUTO,          ## relevance method (AUTO or MANUAl)
+    xtrm_type: RELEVANCE_XTRM_TYPE = RELEVANCE_XTRM_TYPE.BOTH, ## distribution focus (HIGH, LOW, BOTH)
+    coef: int | float = 1.5,                                   ## coefficient for box plot
+    ctrl_pts: list[list[float | int]] | None = None            ## input for "manual" rel method
+    ) -> RelevanceParameters:
     
     """ 
     generates the parameters required for the 'phi()' function, specifies the 
@@ -54,82 +58,70 @@ def phi_ctrl_pts(
     Faculty of Sciences, University of Porto).
     """
     
-    ## quality check for response variable 'y'
-    if any(y == None) or isinstance(y, (int, float, complex)):
-        raise ValueError("response variable 'y' must be specified and numeric")
-    
-    ## quality check for user specified method
-    if method in ["auto", "manual"] is False:
-        raise ValueError("method must be either: 'auto' or 'manual' ")
-    
-    ## quality check for xtrm_type
-    if xtrm_type in ["high", "low", "both"] is False:
-        raise ValueError("xtrm_type must be either: 'high' or 'low' or 'both' ")
-    
     ## conduct 'extremes' method (default)
-    if method == "auto":
-        phi_params = phi_extremes(y, xtrm_type, coef)
-    
+    if method == RELEVANCE_METHOD.AUTO:
+        relevance_parameters = phi_extremes(response_variable, xtrm_type, coef)
     ## conduct 'range' method
-    if method == "manual":
-        phi_params = phi_range(ctrl_pts)
+    else:
+        relevance_parameters = phi_range(ctrl_pts)
     
     ## return phi relevance parameters dictionary
-    return phi_params
+    return relevance_parameters
 
 ## calculates phi parameters for statistically extreme values
-def phi_extremes(y, xtrm_type, coef):
+def phi_extremes(response_variable: "Series[Any]", xtrm_type: RELEVANCE_XTRM_TYPE, coef: float | int) -> RelevanceParameters:
     
     """ 
     assigns relevance to the most extreme values in the distribution of response 
     variable y according to the box plot stats generated from 'box_plot_stat()'
     """
     
-    ## create 'ctrl_pts' variable
-    ctrl_pts = []
+    ## create 'pts' variable
+    pts = []
     
     ## calculates statistically extreme values by
     ## box plot stats in the response variable y
     ## (see function 'boxplot_stats()' for details)
-    bx_plt_st = box_plot_stats(y, coef)
+    bx_plt_st = box_plot_stats(response_variable, coef)
     
     ## calculate range of the response variable y
-    rng = [y.min(), y.max()]
+    rng = [response_variable.min(), response_variable.max()]
     
     ## adjust low
-    if xtrm_type in ["both", "low"] and any(bx_plt_st["xtrms"]
+    if xtrm_type in [RELEVANCE_XTRM_TYPE.BOTH, RELEVANCE_XTRM_TYPE.LOW] and any(bx_plt_st["xtrms"]
     < bx_plt_st["stats"][0]):
-        ctrl_pts.extend([bx_plt_st["stats"][0], 1, 0])
+        pts.extend([bx_plt_st["stats"][0], 1, 0])
    
     ## min
     else:
-        ctrl_pts.extend([rng[0], 0, 0])
+        pts.extend([rng[0], 0, 0])
     
     ## median
     if bx_plt_st["stats"][2] != rng[0]:
-        ctrl_pts.extend([bx_plt_st["stats"][2], 0, 0])
+        pts.extend([bx_plt_st["stats"][2], 0, 0])
     
     ## adjust high
-    if xtrm_type in ["both", "high"] and any(bx_plt_st["xtrms"]
+    if xtrm_type in [RELEVANCE_XTRM_TYPE.BOTH, RELEVANCE_XTRM_TYPE.HIGH] and any(bx_plt_st["xtrms"]
     > bx_plt_st["stats"][4]):
-        ctrl_pts.extend([bx_plt_st["stats"][4], 1, 0])
+        pts.extend([bx_plt_st["stats"][4], 1, 0])
     
     ## max
     else:
         if bx_plt_st["stats"][2] != rng[1]:
-            ctrl_pts.extend([rng[1], 0, 0])
+            pts.extend([rng[1], 0, 0])
     
     ## store phi relevance parameter dictionary
-    phi_params = {}
-    phi_params["method"] = "auto"
-    phi_params["num_pts"] = round(len(ctrl_pts) / 3)
-    phi_params["ctrl_pts"] = ctrl_pts
+    relevance_parameters: RelevanceParameters = {
+        'method':   RELEVANCE_METHOD.AUTO, 
+        'num_pts':  round(len(pts) / 3), 
+        'ctrl_pts': pts
+    }
     
-    ## return dictionary
-    return phi_params
+    ## return relevance parameters
+    return relevance_parameters
 
 ## calculates phi parameters for user specified range
-def phi_range(ctrl_pts):
+def phi_range(ctrl_pts: list[list[float | int]] | None) -> RelevanceParameters:
     
     """
     assigns relevance to values in the response variable y according to user 
@@ -147,21 +139,21 @@ def phi_range(ctrl_pts):
     [55, 1, 0]]
     """
     
-    ## convert 'ctrl_pts' to numpy 2d array (matrix)
-    ctrl_pts = np.array(ctrl_pts)
+    ## set pts to the numpy 2d array (matrix) representation of 'ctrl_pts'
+    pts = np.array(ctrl_pts)
     
     ## quality control checks for user specified phi relevance values
-    if np.isnan(ctrl_pts).any() or np.size(ctrl_pts, axis = 1) > 3 or np.size(
-    ctrl_pts, axis = 1) < 2 or not isinstance(ctrl_pts, np.ndarray):
+    if np.isnan(pts).any() or np.size(pts, axis = 1) > 3 or np.size(
+    pts, axis = 1) < 2 or not isinstance(pts, np.ndarray):
         raise ValueError("ctrl_pts must be given as a matrix in the form: [x, y, m]" 
               "or [x, y]")
     
-    elif (ctrl_pts[1: ,[1, ]] > 1).any() or (ctrl_pts[1: ,[1, ]] < 0).any():
+    elif (pts[1: ,[1, ]] > 1).any() or (pts[1: ,[1, ]] < 0).any():
         raise ValueError("phi relevance function only maps values: [0, 1]")
     
     ## store number of control points
     else:
-        dx = ctrl_pts[1:,[0,]] - ctrl_pts[0:-1,[0,]]
+        dx = pts[1:,[0,]] - pts[0:-1,[0,]]
     
     ## quality control check for dx
     if np.isnan(dx).any() or dx.any() == 0:
@@ -169,14 +161,14 @@ def phi_range(ctrl_pts):
     
     ## sort control points from lowest to highest
     else:
-        ctrl_pts = ctrl_pts[np.argsort(ctrl_pts[:,0])]
+        pts = pts[np.argsort(pts[:,0])]
     
     ## calculate for two column user specified control points [x, y]
-    if np.size(ctrl_pts, axis = 1) == 2:
+    if np.size(pts, axis = 1) == 2:
         
         ## monotone hermite spline method by fritsch & carlson (monoH.FC)
-        dx = ctrl_pts[1:,[0,]] - ctrl_pts[0:-1,[0,]]
-        dy = ctrl_pts[1:,[1,]] - ctrl_pts[0:-1,[1,]]
+        dx = pts[1:,[0,]] - pts[0:-1,[0,]]
+        dy = pts[1:,[1,]] - pts[0:-1,[1,]]
         sx = dy / dx
         
         ## calculate constant extrapolation
@@ -186,14 +178,15 @@ def phi_range(ctrl_pts):
         m.insert(len(sx), 0)
         
         ## add calculated column 'm' to user specified control points 
-        ## from [x, y] to [x, y, m] and store in 'ctrl_pts'
-        ctrl_pts = np.insert(ctrl_pts, 2, m, axis = 1)
-    
+        ## from [x, y] to [x, y, m] and store in 'pts'
+        pts = np.insert(pts, 2, m, axis = 1)
+
     ## store phi relevance parameter dictionary
-    phi_params = {}
-    phi_params["method"] = "manual"
-    phi_params["num_pts"] = np.size(ctrl_pts, axis = 0)
-    phi_params["ctrl_pts"] = np.array(ctrl_pts).ravel().tolist()
+    relevance_parameters: RelevanceParameters = {
+        'method':   RELEVANCE_METHOD.MANUAL, 
+        'num_pts':  np.size(pts, axis = 0), 
+        'ctrl_pts': np.array(pts).ravel().tolist()
+    }
     
     ## return dictionary
-    return phi_params
+    return relevance_parameters

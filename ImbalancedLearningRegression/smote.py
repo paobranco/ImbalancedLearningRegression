@@ -3,8 +3,8 @@ import numpy as np
 import pandas as pd
 
 ## load dependencies - internal
-from ImbalancedLearningRegression.phi import phi
-from ImbalancedLearningRegression.phi_ctrl_pts import phi_ctrl_pts
+from ImbalancedLearningRegression.utils.phi import phi
+from ImbalancedLearningRegression.utils.phi_ctrl_pts import phi_ctrl_pts
 from ImbalancedLearningRegression.over_sampling_smote import over_sampling_smote
 
 ## synthetic minority over-sampling technique for regression
@@ -204,6 +204,10 @@ def smote(
         for i in b_index:
             obj.append(round(b ** 2 / len(b_index[i]) * scale, 2))
             s_perc.append(round(obj[i] / len(b_index[i]), 1))
+
+    print(s_perc)
+    for key, value in b_index.items():
+        print(f"Key: {key} | Value: {value}")
     
     ## conduct over sampling and store modified training set
     data_new = pd.DataFrame()

@@ -1,12 +1,13 @@
-# Third Party Imports
-from pandas import DataFrame
+## Third Party Dependencies
+from pandas           import DataFrame, Series
+from pandas.api.types import is_numeric_dtype
 
-# Standard Library Imports
+## Standard Library Dependencies
 from typing import Any
 from abc    import ABC, abstractmethod
 
-# Package Module Imports
-from ImbalancedLearningRegression.utils.enums import SAMPLE_METHOD, RELEVANCE_METHOD, RELEVANCE_XTRM_TYPE
+## Internal Dependencies
+from ImbalancedLearningRegression.utils.models import SAMPLE_METHOD, RELEVANCE_METHOD, RELEVANCE_XTRM_TYPE
 
 class BaseSampler(ABC):
 
@@ -14,9 +15,9 @@ class BaseSampler(ABC):
                  rel_thres: float = 0.5, rel_method: RELEVANCE_METHOD = RELEVANCE_METHOD.AUTO, rel_xtrm_type: RELEVANCE_XTRM_TYPE = RELEVANCE_XTRM_TYPE.BOTH, 
                  rel_coef: float | int = 1.5, rel_ctrl_pts_rg: list[list[float | int]] | None = None) -> None:
         
-        self.drop_na_row       = drop_na_row 
-        self.drop_na_col       = drop_na_col 
-        self.samp_method       = samp_method
+        self.drop_na_row     = drop_na_row 
+        self.drop_na_col     = drop_na_col 
+        self.samp_method     = samp_method
 
         self.rel_thres       = rel_thres 
         self.rel_method      = rel_method
@@ -24,40 +25,40 @@ class BaseSampler(ABC):
         self.rel_coef        = rel_coef
         self.rel_ctrl_pts_rg = rel_ctrl_pts_rg
 
-    def _preprocess_nan(self, data: DataFrame) -> None:   
-        if self.drop_na_col == True:
-            self.data = data.dropna(axis = 1)  ## drop columns with nan's
-
-        if self.drop_na_row == True:
-            self.data = data.dropna(axis = 0)  ## drop rows with nan's
-
-        if data.isnull().values.any():
-            raise ValueError("cannot proceed: data cannot contain NaN values")
-
     def _validate_type(self, value: Any, dtype: tuple[type, ...], msg: str) -> None:
         if type(value) not in dtype:
             raise TypeError(msg)
 
+    def _validate_relevance_method(self):
+        if self.rel_method == RELEVANCE_METHOD.MANUAL and self.rel_ctrl_pts_rg is None:
+            raise ValueError("rel_ctrl_pts_rg cannot be None while using a manual relevance method.")
+
     def _validate_data(self, data: DataFrame) -> None:
-        self._validate_type(value = data, dtype = (DataFrame, ), msg = "data must be a Pandas Dataframe.")
+        self._validate_type(value = data, dtype = (DataFrame, ), msg = "data must be a Pandas Dataframe.")    
 
     def _validate_response_variable(self, data: DataFrame, response_variable: str) -> None:
+        self._validate_data(data = data)
         self._validate_type(value = response_variable, dtype = (str, ), msg = "response_variable must be a string.")
 
         if not response_variable in data.columns.values:
-            raise ValueError("cannot proceed: response_variable must be a header name (string) found in the dataframe")
+            raise ValueError("response_variable must be a header name (string) found in the dataframe")
 
-    def _validate_relevance(self, relevances: list[float]) -> None:
-        if all(i == 0 for i in relevances):
-            raise ValueError("redefine phi relevance function: all points are 1")
+        if not is_numeric_dtype(data[response_variable]):
+            raise ValueError("response_variable column in the dataframe must be specified and numeric.")       
 
-        if all(i == 1 for i in relevances):
-            raise ValueError("redefine phi relevance function: all points are 0")
+    def _preprocess_nan(self, data: DataFrame) -> DataFrame:   
+        if self.drop_na_col == True:
+            data = data.dropna(axis = 1)  ## drop columns with nan's
 
-    def _classify_data(self):
-        pass
+        if self.drop_na_row == True:
+            data = data.dropna(axis = 0)  ## drop rows with nan's
 
-    def _create_new_data(self, data: DataFrame, response_variable: str) -> tuple[DataFrame, DataFrame]:
+        if data.isnull().values.any():
+            raise ValueError("cannot proceed: data cannot contain NaN values")
+
+        return data
+
+    def _create_new_data(self, data: DataFrame, response_variable: str) -> tuple[DataFrame, "Series[Any]"]:
         ## determine column position for response variable
         response_col_pos = data.columns.get_loc(response_variable)
 
@@ -74,24 +75,71 @@ class BaseSampler(ABC):
         ## sort response variable by ascending order
         response_col = DataFrame(data[str(len(data.columns) - 1)])
         response_col_sorted = response_col.sort_values(by = str(data.columns[len(data.columns) - 1]))
+        response_col_sorted = response_col_sorted[str(len(data.columns) - 1)]
         
-        return data, response_col_sorted
+        return data, response_col_sorted     
 
-    def _format_new_data(self, new_data: DataFrame, original_data: DataFrame, response_variable: str):
+    def _validate_relevance(self, relevances: list[float]) -> None:
+        if all(i == 0 for i in relevances):
+            raise ValueError("redefine phi relevance function: all points are 1")
+
+        if all(i == 1 for i in relevances):
+            raise ValueError("redefine phi relevance function: all points are 0")   
+
+    def _identify_intervals(self, response_variable_sorted: "Series[Any]", relevances: list[float]):
+        ## determine bin (rare or normal) by interval classification
+        intervals = [0]
+
+        for i in range(0, len(response_variable_sorted) - 1):
+            if ((relevances[i] >= self.rel_thres and relevances[i + 1] < self.rel_thres) or 
+            (relevances[i] < self.rel_thres and relevances[i + 1] >= self.rel_thres)):
+                intervals.append(i + 1)
+
+        intervals.append(len(response_variable_sorted))
+
+        ## determine indicies for each interval classification
+        interval_indicies = {}
+
+        for i in range(len(intervals) - 1):
+            interval_indicies.update({i: response_variable_sorted.iloc[intervals[i]:intervals[i + 1]]})
+
+        ## calculate over / under sampling percentage according to
+        ## bump class and user specified method ("balance" or "extreme")
+        samples_to_intervals = round(len(response_variable_sorted) / (len(intervals) - 1))
+        s_perc = []
+        scale = []
+        obj = []
+        
+        if self.samp_method == SAMPLE_METHOD.BALANCE:
+            for i in interval_indicies:
+                s_perc.append(samples_to_intervals / len(interval_indicies[i]))
+                
+        if self.samp_method == SAMPLE_METHOD.EXTREME:
+            for i in interval_indicies:
+                scale.append(samples_to_intervals ** 2 / len(interval_indicies[i]))
+            scale = (len(intervals) - 1) * samples_to_intervals / sum(scale)
+            
+            for i in interval_indicies:
+                obj.append(round(samples_to_intervals ** 2 / len(interval_indicies[i]) * scale, 2))
+                s_perc.append(round(obj[i] / len(interval_indicies[i]), 1))
+
+        return interval_indicies, s_perc
+
+    def _format_new_data(self, new_data: DataFrame, original_data: DataFrame, response_variable: str) -> DataFrame:
         original_dtypes = [original_data.iloc[:, j].dtype for j in range(len(original_data.columns))]
         response_col_pos = original_data.columns.get_loc(response_variable)
+        
+        ## restore response variable y to original position
+        if response_col_pos < len(original_data.columns) - 1:
+            cols = [str(num) for num in range(len(original_data.columns))]
+            cols[response_col_pos], cols[len(original_data.columns) - 1] = cols[len(original_data.columns) - 1], cols[response_col_pos]
+            new_data = new_data[cols]
 
         ## rename feature headers to originals
         new_data.columns = list(original_data.columns)
         
-        ## restore response variable y to original position
-        if response_col_pos < len(original_data) - 1:
-            cols = [str(num) for num in range(len(original_data.columns))]
-            cols[response_col_pos], cols[len(original_data) - 1] = cols[len(original_data) - 1], cols[response_col_pos]
-            new_data = new_data[new_data.columns[cols]]
-        
         ## restore original data types
-        for j in range(len(original_data)):
+        for j in range(len(original_data.columns)):
             new_data.iloc[:, j] = new_data.iloc[:, j].astype(original_dtypes[j])
         
         ## return modified training set

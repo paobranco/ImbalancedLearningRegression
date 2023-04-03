@@ -1,15 +1,21 @@
-## load dependency - third party
-import numpy as np
+## Third Party Dependencies
+import numpy  as np
 import bisect as bs
+from   pandas import Series
+
+## Standard Library Dependencies
+from typing import Any
+
+## Internal Dependencies
+from ImbalancedLearningRegression.utils.models import RelevanceParameters
     
 ## calculate the phi relevance function
 def phi(
     
     ## arguments / inputs
-    y,        ## reponse variable y
-    ctrl_pts  ## params from the 'ctrl_pts()' function
-    
-    ):
+    response_variable: "Series[Any]",         ## response variable
+    relevance_parameters: RelevanceParameters ## params from the 'ctrl_pts()' function
+    ) -> list[float]:
     
     """
     generates a monotonic piecewise cubic spline from a sorted list (ascending)
@@ -45,69 +51,65 @@ def phi(
     """
     
     ## assign variables
-    y = y                            ## reponse variable y
-    n = len(y)                       ## number of points in y
-    num_pts = ctrl_pts["num_pts"]    ## number of control points
-    ctrl_pts = ctrl_pts["ctrl_pts"]  ## control points
+    num_pts      = len(response_variable)             ## number of points in response_variable
+    num_ctrl_pts = relevance_parameters["num_pts"]    ## number of control points
+    ctrl_pts     = relevance_parameters["ctrl_pts"]   ## control points
     
-    ## reindex y
-    y = y.reset_index(drop = True)
+    ## reindex response_variable as pts
+    pts = response_variable.reset_index(drop = True)
     
     ## initialize phi relevance function
-    y_phi = phi_init(y, n, num_pts, ctrl_pts)
+    relevances = phi_init(pts, num_pts, num_ctrl_pts, ctrl_pts)
     
     ## return phi values
-    return y_phi
+    return relevances
 
 ## pre-process control points and calculate phi values
-def phi_init(y, n, num_pts, ctrl_pts):
+def phi_init(pts: "Series[Any]", num_pts: int, num_ctrl_pts: int, ctrl_pts: list[float]) -> list[float]:
     
     ## construct control point arrays
-    x = []
-    y_rel = []
-    m = []
+    x: list[float]     = []
+    y_rel: list[float] = []
+    m: list[float]     = []
     
-    for i in range(num_pts):
+    for i in range(num_ctrl_pts):
         x.append(ctrl_pts[3 * i])
         y_rel.append(ctrl_pts[3 * i + 1])
         m.append(ctrl_pts[3 * i + 2])
     
     ## calculate auxilary coefficients for 'pchip_slope_mono_fc()'
-    h = []
-    delta = []
+    h:     list[float] = []
+    delta: list[float] = []
     
-    for i in range(num_pts - 1):
+    for i in range(num_ctrl_pts - 1):
         h.append(x[i + 1] - x[i])
         delta.append((y_rel[i + 1] - y_rel[i]) / h[i])
     
     ## conduct monotone piecewise cubic interpolation
-    m_adj = pchip_slope_mono_fc(m, delta, num_pts)
+    m_adj = pchip_slope_mono_fc(m, delta, num_ctrl_pts)
     
     ## assign variables for 'pchip_val()'
     a = y_rel
     b = m_adj
     
     ## calculate auxilary coefficients for 'pchip_val()'
-    c = []
-    d = []
+    c: list[float] = []
+    d: list[float] = []
     
-    for i in range(num_pts - 1):
+    for i in range(num_ctrl_pts - 1):
         c.append((3 * delta[i] - 2 * m_adj[i] - m_adj[i + 1]) / h[i])
         d.append((m_adj[i] - 2 * delta[i] + m_adj[i + 1]) / (h[i] * h[i]))
     
     ## calculate phi values
-    y_phi = [None] * n
-    
-    for i in range(n):
-        y_phi[i] = pchip_val(y[i], x, a, b, c, d, num_pts)
+    relevances = [pchip_val(pts[i], x, a, b, c, d, num_ctrl_pts) for i in range(num_pts)]
     
     ## return phi values to the higher function 'phi()'
-    return y_phi
+    return relevances
 
 ## calculate slopes for shape preserving hermite cubic polynomials
-def pchip_slope_mono_fc(m, delta, num_pts):
+def pchip_slope_mono_fc(m: list[float], delta: list[float], num_ctrl_pts: int) -> list[float]:
     
-    for k in range(num_pts - 1):
+    for k in range(num_ctrl_pts - 1):
         sk = delta[k]
         k1 = k + 1
         
@@ -143,24 +145,24 @@ def pchip_slope_mono_fc(m, delta, num_pts):
     return m
 
 ## calculate phi values based on monotone piecewise cubic interpolation
-def pchip_val(y, x, a, b, c, d, num_pts):
+def pchip_val(pt: Any, x: list[float], a: list[float], b: list[float], c: list[float], d: list[float], num_ctrl_pts: int) -> float:
     
     ## find interval that contains or is nearest to y
     i = bs.bisect(
         
         a = x,  ## array of relevance values
-        x = y   ## single observation in y
+        x = pt   ## single observation in y
         ) - 1   ## minus 1 to match index position
     
     ## calculate phi values
-    if i == num_pts - 1:
-        y_val = a[i] + b[i] * (y - x[i])
+    if i == num_ctrl_pts - 1:
+        y_val = a[i] + b[i] * (pt - x[i])
     
     elif i < 0:
         y_val = 1
     
     else:
-        s = y - x[i]
+        s = pt - x[i]
         y_val = a[i] + s * (b[i] + s * (c[i] + s * d[i]))
     
     ## return phi values to the higher function 'phi_init()'

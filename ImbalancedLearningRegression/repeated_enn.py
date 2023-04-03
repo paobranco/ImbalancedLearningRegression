@@ -19,7 +19,7 @@ def repeated_enn(
     samp_method = "balance",  ## over / under sampling ("balance" or extreme")
     drop_na_col = True,       ## auto drop columns with nan's (bool)
     drop_na_row = True,       ## auto drop rows with nan's (bool)
-    max_iter = 100,           ## maximum iterations of enn algorithm (int)               
+    max_iter = 20,           ## maximum iterations of enn algorithm (int)               
   
     ## phi relevance function arguments / inputs
     rel_thres = 0.5,          ## relevance threshold considered rare (pos real)

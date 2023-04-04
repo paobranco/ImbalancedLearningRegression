@@ -64,7 +64,7 @@ def smogn_boost(data, test_data, Y, TotalIterations, pert, replace, k, y, error_
         dt_over_sampled = smogn(data=data, y = y, k = 5, pert = pert, replace=replace, rel_thres = rel_thres, rel_method = "manual", rel_ctrl_pts_rg = rel_ctrl_pts_rg)
 
         # splitting oversampled data for training data use below
-        df = pd.read_csv(dt_over_sampled, header = 0)
+        df = dt_over_sampled, header = 0
         x = df.drop('y', axis = 1)
         x.head()
         y = df['y']

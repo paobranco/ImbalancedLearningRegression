@@ -42,6 +42,9 @@ def smogn_boost(data, test_data, Y, TotalIterations, pert, replace, k, y, error_
     # set an initial iteration
     iteration = 1
     
+    # set an initial result
+    result = 0
+    
     # Dt(i) set distribution as 1/m weights, which is length of data -1, as one of them is the target variable y 
     weights = 1/(len(data))
     dt_distribution = []
@@ -103,10 +106,9 @@ def smogn_boost(data, test_data, Y, TotalIterations, pert, replace, k, y, error_
         numer = (math.log(1/beta))*(dt_data_predictions[i]) 
         denom = (math.log(1/beta))
        
-    # calculate & return result
-    result = 0
-    for i in range(1, iteration + 1):
+        # calculate & return result
         result += (numer/denom)
+    
     return result
         
     # split testing data set into features and target

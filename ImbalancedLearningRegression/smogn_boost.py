@@ -63,8 +63,14 @@ def smogn_boost(data, test_data, Y, TotalIterations, pert, replace, k, y, error_
         # this is the initial iteration of smogn, calculating it for the bumps, giving new data oversampled
         dt_over_sampled = smogn(data=data, y = y, k = 5, pert = pert, replace=replace, rel_thres = rel_thres, rel_method = "manual", rel_ctrl_pts_rg = rel_ctrl_pts_rg)
 
+        # splitting oversampled data for training data use below
+        df = pd.read_csv(dt_over_sampled, header = 0)
+        x = df.drop('y', axis = 1)
+        x.head()
+        y = df['y']
+
         # split oversampled data into a training and test set
-        x_train, X_test, y_train, Y_test = train_test_split(x_train, X_test,  y_train, Y_test, test_size=0.3, random_state=0) # 70% training and 30% test
+        x_train, X_test, y_train, Y_test = train_test_split(x, X_test, y, Y_test, test_size=0.3, random_state=0) # 70% training and 30% test
 
         # this is to call the decision tree and use it to achieve a new model, predict regression value for y (target response variable), and return the predicted values
         dt_model = tree.DecisionTreeRegressor()

@@ -17,13 +17,13 @@ from ImbalancedLearningRegression.gn import gn
 # synthetic minority over-sampling technique for regression with gaussian noise with boost (based on SMOTEBoost using Adaboost)
 # Look at https://github.com/nunompmoniz/ReBoost/blob/master/R/Functions.R
 
-# ****need a train and a test set****
-def smogn_boost(data, test_data, TotalIterations, pert, replace, k, y, error_threshold, rel_thres, samp_method = "balance"):
+def smogn_boost(data, test_data, Y, TotalIterations, pert, replace, k, y, error_threshold, rel_thres, samp_method = "balance"):
 
     # arguments/inputs
     
     # data: training set
     # test_data: test data
+    # Y: target variable from test data
     # TotalIterations: user defined total number of iterations (pos int)
     # pert: perturbation / noise percentage
     # replace: sampling replacement (bool)
@@ -33,30 +33,12 @@ def smogn_boost(data, test_data, TotalIterations, pert, replace, k, y, error_thr
     # rel_thres: user defined relevance threshold 
     # samp_method: "balance or extreme" - sampling method is perc
 
-    # split training data set into features and target
-    ## store data dimensions
-    n = len(test_data)
-    d = len(test_data.columns)
-      
-    ## determine column position for response variable y
-    y_col = test_data.columns.get_loc(y)
-    
-    ## move response variable y to last column
-    if y_col < d - 1:
-        cols = list(range(d))
-        cols[y_col], cols[d - 1] = cols[d - 1], cols[y_col]
-        data = data[test_data.columns[cols]]
-    
-    ## store original feature headers and
-    ## encode feature headers to index position
-    feat_names = list(test_data.columns)
-    data.columns = range(d)
-    
-    ## sort response variable y by ascending order
-    y = pd.DataFrame(test_data[d - 1])
-    y_sort = y.sort_values(by = d - 1)
-    y_sort = y_sort[d - 1]
-    
+    # pre-processing the test_data, reference: https://subscription.packtpub.com/book/data/9781838552862/1/ch01lvl1sec10/train-and-test-data
+    df = pd.read_csv(test_data, header = 0)
+    X_test = df.drop('Y', axis = 1)
+    X_test.head()
+    Y_test = df['Y']
+
     # set an initial iteration
     iteration = 1
     
@@ -79,16 +61,16 @@ def smogn_boost(data, test_data, TotalIterations, pert, replace, k, y, error_thr
         dt_over_sampled = smogn(data=data, y = y, k = 5, pert = pert, replace=replace, rel_thres = rel_thres, rel_method = "manual", rel_ctrl_pts_rg = rel_ctrl_pts_rg)
 
         # split oversampled data into a training and test set
-        x = data[]
-        y = data[]
-        x_train, x_test, Y_train, Y_test = train_test_split(x, Y, test_size=0.3, random_state=1) # 70% training and 30% test
+        x_train, X_test, y_train, Y_test = train_test_split(x_train, X_test,  y_train, Y_test, test_size=0.3, random_state=0) # 70% training and 30% test
 
         # this is to call the decision tree and use it to achieve a new model, predict regression value for y (target response variable), and return the predicted values
         dt_model = tree.DecisionTreeRegressor()
         
         # check if I need to separate features and target
-        dt_model = dt_model.fit(dt_over_sampled) 
-        dt_data_predictions = dt_model.predict(y)
+        # dt_model = dt_model.fit(dt_over_sampled) 
+        dt_model = dt_model.fit(x_train, y_train)
+        # dt_data_predictions = dt_model.predict(y)
+        dt_data_predictions = dt_model.predict(X_test)
 
         # initialize error rate
         error = 0
@@ -115,12 +97,37 @@ def smogn_boost(data, test_data, TotalIterations, pert, replace, k, y, error_thr
         dt_normalized = preprocessing.normalize(dt_distribution, max)
 
         # iteration count
-        iteration = iteration + 1
+        iteration += 1
         
-        # calculation for weighted sum of all T models predictions, weights proportional to inverse error rates logarithm
-        WeightSum = np.sum(dt_distribution)
+        # calculate beta log
+        numer = (math.log(1/beta))*(dt_data_predictions[i]) 
+        denom = (math.log(1/beta))
+       
+    #
+    result = 0
+    for i in range(1, iteration + 1):
+        result += (numer/denom)
+    return result
         
-    # **** need to modify original data after the whole loop ****
+    # split testing data set into features and target
+    # store data dimensions
+    #n = len(test_data)
+    #d = len(test_data.columns)
+    # determine column position for response variable Y
+    #Y_col = test_data.columns.get_loc(Y)
     
+    # move response variable Y to last column
+    #if Y_col < d - 1:
+     #   cols = list(range(d))
+      #  cols[Y_col], cols[d - 1] = cols[d - 1], cols[Y_col]
+       # data = data[test_data.columns[cols]]
     
-    return smogn_boost
+    # store original feature headers and
+    # encode feature headers to index position
+    #feat_names = list(test_data.columns)
+    #data.columns = range(d)
+    
+    # sort response variable Y by ascending order
+    #Y = pd.DataFrame(test_data[d - 1])
+    #Y_sort = Y.sort_values(by = d - 1)
+    #Y_sort = Y_sort[d - 1]

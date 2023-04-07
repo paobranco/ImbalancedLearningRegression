@@ -17,7 +17,7 @@ from ImbalancedLearningRegression.gn import gn
 # synthetic minority over-sampling technique for regression with gaussian noise with boost (based on SMOTEBoost using Adaboost)
 # Look at https://github.com/nunompmoniz/ReBoost/blob/master/R/Functions.R
 
-def smogn_boost(data, test_data, Y_test, TotalIterations, pert, replace, k, y, error_threshold, rel_thres, samp_method = "balance"):
+def smogn_boost(data, test_data, TotalIterations, pert, replace, k, y, error_threshold, rel_thres, samp_method = "balance"):
 
     # arguments/inputs
     
@@ -36,9 +36,8 @@ def smogn_boost(data, test_data, Y_test, TotalIterations, pert, replace, k, y, e
     # pre-processing the test_data, reference: https://subscription.packtpub.com/book/data/9781838552862/1/ch01lvl1sec10/train-and-test-data
     # read the test data and split features (X) and target value (Y)
     df = pd.read_csv(test_data, header = 0)
-    X_test = df.drop('Y', axis = 1)
-    X_test.head()
-    Y_test = df['Y_test']
+    X_test = df.drop('y', axis = 1)
+    Y_test = df['y']
 
     # set for clarity
     y_train = y

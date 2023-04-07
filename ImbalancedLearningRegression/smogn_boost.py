@@ -17,27 +17,28 @@ from ImbalancedLearningRegression.gn import gn
 # synthetic minority over-sampling technique for regression with gaussian noise with boost (based on SMOTEBoost using Adaboost)
 # Look at https://github.com/nunompmoniz/ReBoost/blob/master/R/Functions.R
 
-def smogn_boost(data, test_data, Y, TotalIterations, pert, replace, k, y, error_threshold, rel_thres, samp_method = "balance"):
+def smogn_boost(data, test_data, Y_test, TotalIterations, pert, replace, k, y_train, error_threshold, rel_thres, samp_method = "balance"):
 
     # arguments/inputs
     
     # data: training set
     # test_data: test data
-    # Y: target variable from test data
+    # Y_test: target variable from test data
     # TotalIterations: user defined total number of iterations (pos int)
     # pert: perturbation / noise percentage
     # replace: sampling replacement (bool)
     # k: num of neighs for over-sampling (pos int)
-    # y: response variable y by name (string)
+    # y_train: response variable y by name (string)
     # error_threshold: user defined error threshold 
     # rel_thres: user defined relevance threshold 
     # samp_method: "balance or extreme" - sampling method is perc
 
     # pre-processing the test_data, reference: https://subscription.packtpub.com/book/data/9781838552862/1/ch01lvl1sec10/train-and-test-data
+    # read the test data and split features (X) and target value (Y)
     df = pd.read_csv(test_data, header = 0)
     X_test = df.drop('Y', axis = 1)
     X_test.head()
-    Y_test = df['Y']
+    Y_test = df['Y_test']
 
     # set an initial iteration
     iteration = 1
@@ -60,26 +61,23 @@ def smogn_boost(data, test_data, Y, TotalIterations, pert, replace, k, y, error_
     # loop while iteration is less than user provided iterations
     while iteration <= TotalIterations:
 
-        # this is the initial iteration of smogn, calculating it for the bumps, giving new data oversampled
-        dt_over_sampled = smogn(data=data, y = y, k = 5, pert = pert, replace=replace, rel_thres = rel_thres, rel_method = "manual", rel_ctrl_pts_rg = rel_ctrl_pts_rg)
+        # use initial training data set provided by user to obtain oversampled dataset using SMOGN, calculating it for the bumps
+        dt_over_sampled = smogn(data=data, y_train = y_train, k = 5, pert = pert, replace=replace, rel_thres = rel_thres, rel_method = "manual", rel_ctrl_pts_rg = rel_ctrl_pts_rg)
 
-        # splitting oversampled data for training data use below
+        # splitting oversampled data for subsequent training data use below
         df = dt_over_sampled, header = 0
-        x = df.drop('y', axis = 1)
-        x.head()
-        y = df['y']
+        x_oversampled = df.drop('y', axis = 1)
+        x_oversampled.head()
+        y_oversampled = df['y_train']
 
-        # split oversampled data into a training and test set
-        x_train, X_test, y_train, Y_test = train_test_split(x, X_test, y, Y_test, test_size=0.3, random_state=0) # 70% training and 30% test
-
-        # this is to call the decision tree and use it to achieve a new model, predict regression value for y (target response variable), and return the predicted values
+        # calls the decision tree and use it to achieve a new model, predict regression value for y (target response variable), and return the predicted values
         dt_model = tree.DecisionTreeRegressor()
         
-        # check if I need to separate features and target
-        # dt_model = dt_model.fit(dt_over_sampled) 
-        dt_model = dt_model.fit(x_train, y_train)
-        # dt_data_predictions = dt_model.predict(y)
-        dt_data_predictions = dt_model.predict(X_test)
+        # train decision tree classifier
+        dt_model = dt_model.fit(x_oversampled, y_oversampled)
+        
+        # predict the response for 
+        dt_data_predictions = dt_model.predict(###)
 
         # initialize error rate
         error = 0
@@ -116,6 +114,9 @@ def smogn_boost(data, test_data, Y, TotalIterations, pert, replace, k, y, error_
         result += (numer/denom)
     
     return result
+        
+    # split oversampled data into a training and test set
+    # x_train, X_test, y_train, Y_test = train_test_split(x_oversampled, X_test, y_oversampled, Y_test, test_size=0.3, random_state=0) # 70% training and 30% test
         
     # split testing data set into features and target
     # store data dimensions

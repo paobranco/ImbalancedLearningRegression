@@ -38,8 +38,13 @@ def smogn_boost(data, test_data, TotalIterations, pert, replace, k, y, error_thr
     df = pd.read_csv(test_data, header = 0)
     X_test = df.drop('y', axis = 1)
     Y_test = df['y']
+    
+    # read the data and split features (X) and target value (Y)
+    df = pd.read_csv(data, header = 0)
+    X_data = df.drop('y', axis = 1)
+    Y_data = df['y']
 
-    # set for clarity
+    # set for clarity, name of target variable not data
     y_train = y
     
     # set an initial iteration
@@ -55,7 +60,7 @@ def smogn_boost(data, test_data, TotalIterations, pert, replace, k, y, error_thr
         dt_distribution[i] = weights
 
     # calling phi control
-    pc = phi_ctrl_pts (y=y, method="manual", xtrm_type = "both", coeff = 1.5, ctrl_pts=any)
+    pc = phi_ctrl_pts (y=y, method="auto", xtrm_type = "both", coeff = 1.5, ctrl_pts=None)
     
     # calling only the control points (third value) from the output
     rel_ctrl_pts_rg = pc[2]
@@ -68,8 +73,7 @@ def smogn_boost(data, test_data, TotalIterations, pert, replace, k, y, error_thr
 
         # splitting oversampled data for subsequent training data use below
         df = dt_over_sampled, header = 0
-        x_oversampled = df.drop('y', axis = 1)
-        x_oversampled.head()
+        x_oversampled = df.drop('y_train', axis = 1)
         y_oversampled = df['y_train']
 
         # calls the decision tree and use it to achieve a new model, predict regression value for y (target response variable), and return the predicted values
@@ -79,7 +83,7 @@ def smogn_boost(data, test_data, TotalIterations, pert, replace, k, y, error_thr
         dt_model = dt_model.fit(x_oversampled, y_oversampled)
         
         # predict the response for 
-        dt_data_predictions = dt_model.predict(###)
+        dt_data_predictions = dt_model.predict(X_data)
 
         # initialize error rate
         model_error = 0

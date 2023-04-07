@@ -17,7 +17,7 @@ from ImbalancedLearningRegression.gn import gn
 # synthetic minority over-sampling technique for regression with gaussian noise with boost (based on SMOTEBoost using Adaboost)
 # Look at https://github.com/nunompmoniz/ReBoost/blob/master/R/Functions.R
 
-def smogn_boost(data, test_data, Y_test, TotalIterations, pert, replace, k, y_train, error_threshold, rel_thres, samp_method = "balance"):
+def smogn_boost(data, test_data, Y_test, TotalIterations, pert, replace, k, y, error_threshold, rel_thres, samp_method = "balance"):
 
     # arguments/inputs
     
@@ -28,7 +28,7 @@ def smogn_boost(data, test_data, Y_test, TotalIterations, pert, replace, k, y_tr
     # pert: perturbation / noise percentage
     # replace: sampling replacement (bool)
     # k: num of neighs for over-sampling (pos int)
-    # y_train: response variable y by name (string)
+    # y: response variable y by name (string)
     # error_threshold: user defined error threshold 
     # rel_thres: user defined relevance threshold 
     # samp_method: "balance or extreme" - sampling method is perc
@@ -40,6 +40,9 @@ def smogn_boost(data, test_data, Y_test, TotalIterations, pert, replace, k, y_tr
     X_test.head()
     Y_test = df['Y_test']
 
+    # set for clarity
+    y_train = y
+    
     # set an initial iteration
     iteration = 1
     
@@ -80,22 +83,22 @@ def smogn_boost(data, test_data, Y_test, TotalIterations, pert, replace, k, y_tr
         dt_data_predictions = dt_model.predict(###)
 
         # initialize error rate
-        error = 0
+        model_error = 0
 
         # calculate the error rate of the new model achieved earlier, as the delta between original dataset and predicted oversampled dataset
         # for each y in the dataset, calculate whether it is greater/lower than threshold and update accordingly
         error = abs((data[y] - dt_data_predictions[y])/data[y])
         
         for i in range(1, len[dt_data_predictions], 1):
-            if error[i] > error_threshold:
+            if model_error[i] > error_threshold:
                 epsilon_t = epsilon_t + dt_distribution[i]
                                       
-        # beta is the update parameter of weights based on the error rate calculated
+        # beta is the update parameter of weights based on the model error rate calculated
         beta = pow(epsilon_t, 2)
 
         # update the distribution weights
         for i in dt_distribution:
-            if error[i] <= error_threshold:
+            if model_error[i] <= error_threshold:
                 dt_distribution[i] = dt_distribution[i] * beta
             else:
                 dt_distribution[i] = dt_distribution[i]

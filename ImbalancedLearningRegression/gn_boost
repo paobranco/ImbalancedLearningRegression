@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import sklearn
 import math
-import smogn as smogn
+import gn as gn
 from sklearn import tree
 from sklearn import preprocessing
 from sklearn.model_selection import train_test_split
@@ -11,7 +11,6 @@ from sklearn.model_selection import train_test_split
 # load dependencies - internal
 from ImbalancedLearningRegression.phi import phi
 from ImbalancedLearningRegression.phi_ctrl_pts import phi_ctrl_pts
-from ImbalancedLearningRegression.over_sampling_gn import over_sampling_gn
 from ImbalancedLearningRegression.gn import gn
 
 # synthetic minority over-sampling technique for regression with gaussian noise with boost (based on SMOTEBoost using Adaboost)
@@ -121,35 +120,3 @@ def gn_boost(data, test_data, TotalIterations, pert, replace, k, y, error_thresh
     
     return result
         
-    # split oversampled data into a training and test set
-    # x_train, X_test, y_train, Y_test = train_test_split(x_oversampled, X_test, y_oversampled, Y_test, test_size=0.3, random_state=0) # 70% training and 30% test
-        
-    # split testing data set into features and target
-    # store data dimensions
-    #n = len(test_data)
-    #d = len(test_data.columns)
-    # determine column position for response variable Y
-    #Y_col = test_data.columns.get_loc(Y)
-    
-    # move response variable Y to last column
-    #if Y_col < d - 1:
-     #   cols = list(range(d))
-      #  cols[Y_col], cols[d - 1] = cols[d - 1], cols[Y_col]
-       # data = data[test_data.columns[cols]]
-    
-    # store original feature headers and
-    # encode feature headers to index position
-    #feat_names = list(test_data.columns)
-    #data.columns = range(d)
-    
-    # sort response variable Y by ascending order
-    #Y = pd.DataFrame(test_data[d - 1])
-    #Y_sort = Y.sort_values(by = d - 1)
-    #Y_sort = Y_sort[d - 1]
-Footer
-© 2023 GitHub, Inc.
-Footer navigation
-Terms
-Privacy
-Security
-Status

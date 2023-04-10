@@ -115,11 +115,23 @@ def smogn_boost(data, test_data, y, TotalIterations, pert, replace, k, error_thr
 
         # iteration count
         iteration += 1
-               
+    
+    
+    # initialize numerator and denominator
+    numer = 0
+    denom = 0
+    
     # calculate beta log
-    for b in beta:
-        for i in dt_test_predictions:
-            numer = (math.log(1/beta[b]))*(dt_test_predictions[i]) 
-            denom = (math.log(1/beta[b]))
-        result.append(numer/denom)
-    return result
+    with b, i in np.nditer([beta, dt_test_predictions, numer, denom]) as it:
+        for b, i, n, d in it:
+            n = n + math.log(b) * i
+            d = d + math.log(b)
+    return n/d
+    
+    # calculate beta log
+    #for b in beta:
+     #   for i in dt_test_predictions:
+      #      numer = (math.log(1/beta[b]))*(dt_test_predictions[i]) 
+       #     denom = (math.log(1/beta[b]))
+        #result.append(numer/denom)
+    #return result

@@ -48,14 +48,10 @@ def smogn_boost(data, test_data, y, TotalIterations, pert, replace, k, error_thr
     # set an initial iteration
     iteration = 1
     
-    # set an initial result
-    result = []
-    
-    # initialize array of beta values
-    beta = []
-    
-    # initialize array of decision tree predictions based on x_test
-    dt_test_predictions = []
+    # set an array of results, beta values, and decision tree predictions based on x_test
+    result = np.empty(TotalIterations, dtype=int)
+    beta = np.empty(TotalIterations, dtype=int)
+    dt_test_predictions = np.empty(X_test, dtype=int)
     
     # Dt(i) set distribution as 1/m weights, which is length of data -1, as one of them is the target variable y 
     weights = 1/(len(data))

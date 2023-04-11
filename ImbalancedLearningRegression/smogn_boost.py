@@ -53,9 +53,9 @@ def smogn_boost(data, test_data, y, TotalIterations, pert, replace, k, error_thr
     beta = np.empty(TotalIterations, dtype=int)
     dt_test_predictions = np.empty(X_test, dtype=int)
     
-    # Dt(i) set distribution as 1/m weights, which is length of data -1, as one of them is the target variable y 
+    # Dt(i) set distribution as 1/m weights, which is length of training data -1, as one of them is the target variable y 
     weights = 1/(len(data))
-    dt_distribution = []
+    dt_distribution = np.zeros(len(data))
     for i in range(len(data)):
         dt_distribution[i] = weights
 
@@ -89,14 +89,15 @@ def smogn_boost(data, test_data, y, TotalIterations, pert, replace, k, error_thr
         dt_test_predictions.append(dt_model.predict(X_test))
 
         # initialize model error rate & epsilon t value
-        model_error = 0
+        model_error = np.zeros(len(dt_data_predictions))
         epsilon_t = 0
 
         # calculate the model error rate of the new model achieved earlier, as the delta between original dataset and predicted oversampled dataset
         # for each y in the dataset, calculate whether it is greater/lower than threshold and update accordingly
-        model_error = abs((data[Y_data] - dt_data_predictions[i])/data[Y_data])
+        for i in range(len(dt_data_predictions)):
+            model_error[i] = abs((Y_data[i] - dt_data_predictions[i])/Y_data[i])
         
-        for i in range(1, len[dt_data_predictions], 1):
+        for i in range(len(dt_data_predictions)):
             if model_error[i] > error_threshold:
                 epsilon_t = epsilon_t + dt_distribution[i]
                                       

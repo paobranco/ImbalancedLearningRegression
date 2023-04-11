@@ -67,7 +67,7 @@ def gn_boost(data, test_data, TotalIterations, pert, replace, k, y, error_thresh
     # loop while iteration is less than user provided iterations
     while iteration <= TotalIterations:
 
-        # use initial training data set provided by user to obtain oversampled dataset using SMOGN, calculating it for the bumps
+        # use initial training data set provided by user to obtain oversampled dataset using GN, calculating it for the bumps
         dt_over_sampled = gn(data=data, y_train = y_train, k = 5, pert = pert, replace=replace, rel_thres = rel_thres, rel_method = "manual", rel_ctrl_pts_rg = rel_ctrl_pts_rg)
 
         # splitting oversampled data for subsequent training data use below

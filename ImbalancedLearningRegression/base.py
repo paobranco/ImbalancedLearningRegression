@@ -1,5 +1,6 @@
 ## Third Party Dependencies
-from pandas           import DataFrame, Series
+from numpy            import repeat
+from pandas           import DataFrame, Series, Index, Categorical, factorize, to_numeric, options
 from pandas.api.types import is_numeric_dtype
 
 ## Standard Library Dependencies
@@ -59,25 +60,28 @@ class BaseSampler(ABC):
         return data
 
     def _create_new_data(self, data: DataFrame, response_variable: str) -> tuple[DataFrame, "Series[Any]"]:
+        # Create new DataFrame
+        new_data = data.copy()
+
         ## determine column position for response variable
-        response_col_pos = data.columns.get_loc(response_variable)
+        response_col_pos = new_data.columns.get_loc(response_variable)
 
         ## move response variable to last column
-        if response_col_pos < len(data.columns) - 1:
-            cols = list(data.columns)
-            cols[response_col_pos], cols[len(data.columns) - 1] = cols[len(data.columns) - 1], cols[response_col_pos]
-            data = data[cols]
+        if response_col_pos < len(new_data.columns) - 1:
+            cols = list(new_data.columns)
+            cols[response_col_pos], cols[len(new_data.columns) - 1] = cols[len(new_data.columns) - 1], cols[response_col_pos]
+            new_data = new_data[cols]
 
         ## store original feature headers and
         ## encode feature headers to index position
-        data.columns = [str(num) for num in range(len(data.columns))]
+        new_data.columns = [num for num in range(len(new_data.columns))]
 
         ## sort response variable by ascending order
-        response_col = DataFrame(data[str(len(data.columns) - 1)])
-        response_col_sorted = response_col.sort_values(by = str(data.columns[len(data.columns) - 1]))
-        response_col_sorted = response_col_sorted[str(len(data.columns) - 1)]
+        response_col = DataFrame(new_data[len(new_data.columns) - 1])
+        response_col_sorted = response_col.sort_values(by = (new_data.columns[len(new_data.columns) - 1]).tolist())
+        response_col_sorted = response_col_sorted[len(new_data.columns) - 1]
         
-        return data, response_col_sorted     
+        return new_data, response_col_sorted     
 
     def _validate_relevance(self, relevances: list[float]) -> None:
         if all(i == 0 for i in relevances):
@@ -86,67 +90,123 @@ class BaseSampler(ABC):
         if all(i == 1 for i in relevances):
             raise ValueError("redefine phi relevance function: all points are 0")   
 
-    def _identify_intervals(self, response_variable_sorted: "Series[Any]", relevances: list[float]):
+    def _identify_intervals(self, response_variable_sorted: "Series[Any]", relevances: list[float]) -> tuple[dict[int, "Series[Any]"], list[float]]:
         ## determine bin (rare or normal) by interval classification
-        intervals = [0]
+        interval_indicies = [0]
 
-        for i in range(0, len(response_variable_sorted) - 1):
+        for i in range(len(response_variable_sorted) - 1):
             if ((relevances[i] >= self.rel_thres and relevances[i + 1] < self.rel_thres) or 
             (relevances[i] < self.rel_thres and relevances[i + 1] >= self.rel_thres)):
-                intervals.append(i + 1)
+                interval_indicies.append(i + 1)
 
-        intervals.append(len(response_variable_sorted))
+        interval_indicies.append(len(response_variable_sorted))
 
         ## determine indicies for each interval classification
-        interval_indicies = {}
+        intervals: dict[int, "Series[Any]"] = {}
 
-        for i in range(len(intervals) - 1):
-            interval_indicies.update({i: response_variable_sorted.iloc[intervals[i]:intervals[i + 1]]})
+        for i in range(len(interval_indicies) - 1):
+            intervals.update({i: response_variable_sorted.iloc[interval_indicies[i]:interval_indicies[i + 1]]})
 
         ## calculate over / under sampling percentage according to
         ## bump class and user specified method ("balance" or "extreme")
-        samples_to_intervals = round(len(response_variable_sorted) / (len(intervals) - 1))
-        s_perc = []
+        samples_to_intervals = round(len(response_variable_sorted) / (len(interval_indicies) - 1))
+        perc: list[float] = []
         scale = []
-        obj = []
+        obj   = []
         
         if self.samp_method == SAMPLE_METHOD.BALANCE:
-            for i in interval_indicies:
-                s_perc.append(samples_to_intervals / len(interval_indicies[i]))
-                
-        if self.samp_method == SAMPLE_METHOD.EXTREME:
-            for i in interval_indicies:
-                scale.append(samples_to_intervals ** 2 / len(interval_indicies[i]))
-            scale = (len(intervals) - 1) * samples_to_intervals / sum(scale)
-            
-            for i in interval_indicies:
-                obj.append(round(samples_to_intervals ** 2 / len(interval_indicies[i]) * scale, 2))
-                s_perc.append(round(obj[i] / len(interval_indicies[i]), 1))
+            for i in intervals.keys():
+                perc.append(samples_to_intervals / len(intervals[i]))  
 
-        return interval_indicies, s_perc
+        elif self.samp_method == SAMPLE_METHOD.EXTREME:
+            for i in intervals.keys():
+                scale.append(samples_to_intervals ** 2 / len(intervals[i]))
+            scale = (len(interval_indicies) - 1) * samples_to_intervals / sum(scale)
+            
+            for i in intervals.keys():
+                obj.append(round(samples_to_intervals ** 2 / len(intervals[i]) * scale, 2))
+                perc.append(round(obj[i] / len(intervals[i]), 1))
+
+        return intervals, perc
+
+    def _preprocess_synthetic_data(self, data: DataFrame, indicies: Index) -> tuple[DataFrame, DataFrame]:
+        preprocessed_data: DataFrame = data.loc[indicies]
+
+        ## find features without variation (constant features)
+        feat_const = preprocessed_data.columns[preprocessed_data.nunique() == 1]
+
+        ## temporarily remove constant features
+        preprocessed_data = preprocessed_data.drop(feat_const, axis = 1)
+
+        ## reindex features with variation
+        for idx, column in enumerate(preprocessed_data.columns):
+            preprocessed_data.rename(columns = { column : idx }, inplace = True)
+
+        pre_numerical_processed_data = preprocessed_data.copy()
+        
+        ## create nominal and numeric feature list and
+        ## label encode nominal / categorical features
+        ## (strictly label encode, not one hot encode) 
+        nom_dtypes = ["object", "bool", "datetime64"]
+
+        for idx, column in enumerate(preprocessed_data.columns):
+            if preprocessed_data[column].dtype in nom_dtypes:
+                preprocessed_data.isetitem(idx, Categorical(factorize(preprocessed_data.iloc[:, idx])[0]))
+
+        preprocessed_data = preprocessed_data.apply(to_numeric)
+
+        return preprocessed_data, pre_numerical_processed_data
+
+    def _format_synthetic_data(self, data: DataFrame, synth_data: DataFrame, pre_numerical_processed_data: DataFrame) -> DataFrame:
+
+        nom_dtypes = ["object", "bool", "datetime64"]
+        num_dtypes = ["int64", "float64"]
+        const_cols = data.columns[data.nunique() == 1]
+
+        for column in pre_numerical_processed_data.columns:
+            if pre_numerical_processed_data[column].dtype in nom_dtypes:
+                code_list = synth_data.loc[:, column].unique()
+                cat_list  = pre_numerical_processed_data.loc[:, column].unique()
+
+                for x in code_list:
+                    synth_data.loc[:, column] = synth_data.loc[:, column].replace(to_replace = x, value = cat_list[int(x)])
+            
+            ## convert negative values to zero in non-negative features
+            elif pre_numerical_processed_data[column].dtype in num_dtypes and (pre_numerical_processed_data[column] > 0).any():
+                synth_data.loc[:, column] = synth_data.loc[:, column].clip(lower = 0)
+        
+        synth_data.columns = data.drop(const_cols, axis = 1).columns
+        ## reintroduce constant features previously removed
+        for column in const_cols:
+            synth_data.insert(
+                loc = data.columns.get_loc(column),
+                column = column,
+                value = repeat(data.loc[0, column], len(synth_data)))
+        
+        ## return over-sampling results dataframe
+        return synth_data
 
     def _format_new_data(self, new_data: DataFrame, original_data: DataFrame, response_variable: str) -> DataFrame:
-        original_dtypes = [original_data.iloc[:, j].dtype for j in range(len(original_data.columns))]
         response_col_pos = original_data.columns.get_loc(response_variable)
         
         ## restore response variable y to original position
         if response_col_pos < len(original_data.columns) - 1:
-            cols = [str(num) for num in range(len(original_data.columns))]
+            cols = [num for num in range(len(original_data.columns))]
             cols[response_col_pos], cols[len(original_data.columns) - 1] = cols[len(original_data.columns) - 1], cols[response_col_pos]
             new_data = new_data[cols]
 
         ## rename feature headers to originals
-        new_data.columns = list(original_data.columns)
+        new_data.columns = original_data.columns
         
         ## restore original data types
-        for j in range(len(original_data.columns)):
-            new_data.iloc[:, j] = new_data.iloc[:, j].astype(original_dtypes[j])
+        for idx, column in enumerate(original_data.columns):
+            new_data.isetitem(idx, new_data.loc[:, column].astype(original_data[column].dtype))
         
         ## return modified training set
         return new_data
 
     @abstractmethod
-    def fit_resample(self):
+    def fit_resample(self, data: DataFrame, response_variable: str):
         raise NotImplementedError("BaseSampler must never call fit_resample as it's just a base abstract class.")
 
     # Define Setters and Getters for BaseSampler

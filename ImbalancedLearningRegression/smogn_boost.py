@@ -122,6 +122,6 @@ def smogn_boost(data, test_data, y, TotalIterations, pert, replace, k, error_thr
     denom = 0
     
     for b, i in zip(beta, dt_test_predictions):
-            numer += math.log(b) * i
-            denom += math.log(b)
+            numer += math.log(1/b) * i
+            denom += math.log(1/b)
     return numer/denom

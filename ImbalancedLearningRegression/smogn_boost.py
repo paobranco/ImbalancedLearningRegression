@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import sklearn
 import math
-import smogn as smogn
+from ImbalancedLearningRegression.smogn import smogn
 from sklearn import tree
 from sklearn import preprocessing
 from sklearn.model_selection import train_test_split
@@ -33,12 +33,12 @@ def smogn_boost(data, test_data, y, TotalIterations, pert, replace, k, error_thr
     # samp_method: "balance or extreme" - sampling method is perc
     
     # read the test data and split features (X) and target value (Y), reference: https://subscription.packtpub.com/book/data/9781838552862/1/ch01lvl1sec10/train-and-test-data
-    df_testData = pd.read_csv(test_data, header = 0)
+    df_testData = pd.read_csv(test_data)
     X_test = df_testData.drop(y, axis = 1)
     Y_test = df_testData[y]
     
     # read the training data and split features (X) and target value (Y)
-    df_data = pd.read_csv(data, header = 0)
+    df_data = pd.read_csv(data)
     X_data = df_data.drop(y, axis = 1)
     Y_data = df_data[y]
 
@@ -51,7 +51,7 @@ def smogn_boost(data, test_data, y, TotalIterations, pert, replace, k, error_thr
     # set an array of results, beta values, and decision tree predictions based on x_test
     result = np.empty(TotalIterations, dtype=int)
     beta = np.empty(TotalIterations, dtype=int)
-    dt_test_predictions = np.empty(X_test, dtype=int)
+    dt_test_predictions = np.empty(TotalIterations, dtype=int)
     
     # Dt(i) set distribution as 1/m weights, which is length of training data -1, as one of them is the target variable y 
     weights = 1/(len(data))
@@ -59,17 +59,48 @@ def smogn_boost(data, test_data, y, TotalIterations, pert, replace, k, error_thr
     for i in range(len(data)):
         dt_distribution[i] = weights
 
+   
+    ## store data dimensions
+    n = len(df_data)
+    d = len(df_data.columns)
+    
+    ## store original data types
+    feat_dtypes_orig = [None] * d
+    
+    for j in range(d):
+        feat_dtypes_orig[j] = df_data.iloc[:, j].dtype
+    
+    ## determine column position for response variable y
+    y_col = df_data.columns.get_loc(y)
+    
+    ## move response variable y to last column
+    if y_col < d - 1:
+        cols = list(range(d))
+        cols[y_col], cols[d - 1] = cols[d - 1], cols[y_col]
+        df_data = df_data[df_data.columns[cols]]
+    
+    ## store original feature headers and
+    ## encode feature headers to index position
+    feat_names = list(df_data.columns)
+    df_data.columns = range(d)
+    
+    ## sort response variable y by ascending order
+    y = pd.DataFrame(df_data[d - 1])
+    y_sort = y.sort_values(by = d - 1)
+    y_sort = y_sort[d - 1]
+
+
     # calling phi control
-    pc = phi_ctrl_pts (y=y, method="auto", xtrm_type = "both", coeff = 1.5, ctrl_pts=None)
+    pc = phi_ctrl_pts(y=y_sort)
     
     # calling only the control points (third value) from the output
-    rel_ctrl_pts_rg = pc[2]
+    rel_ctrl_pts_rg = pc["ctrl_pts"]
     
     # loop while iteration is less than user provided iterations
     while iteration <= TotalIterations:
 
         # use initial training data set provided by user to obtain oversampled dataset using SMOGN, calculating it for the bumps
-        dt_over_sampled = smogn(data=data, y_train = y_train, k = 5, pert = pert, replace=replace, rel_thres = rel_thres, rel_method = "manual", rel_ctrl_pts_rg = rel_ctrl_pts_rg)
+        dt_over_sampled = smogn(data=df_testData, y = y_train, k = 5)
 
         # splitting oversampled data for subsequent training data use below
         df_oversampled = dt_over_sampled, header = 0

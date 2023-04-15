@@ -19,5 +19,9 @@ class BaseOverSampler(BaseSampler):
         rel_method = rel_method, rel_xtrm_type = rel_xtrm_type, rel_coef = rel_coef, rel_ctrl_pts_rg = rel_ctrl_pts_rg)
 
     @abstractmethod
-    def _oversample(self, data: DataFrame, indicies: dict[int, "Series[Any]"], perc: list[float]):
-        pass
+    def fit_resample(self, data: DataFrame, response_variable: str) -> DataFrame:
+        raise NotImplementedError("BaseOverSampler must never call fit_resample as it's just a base abstract class.")
+
+    @abstractmethod
+    def _oversample(self, data: DataFrame, indicies: dict[int, "Series[Any]"], perc: list[float]) -> DataFrame:
+        raise NotImplementedError("BaseOverSampler must never call _oversample as it's just a base abstract class.")

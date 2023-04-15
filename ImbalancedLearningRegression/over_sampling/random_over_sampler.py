@@ -26,14 +26,14 @@ class RandomOverSampler(BaseOverSampler):
         self.manual_perc       = manual_perc
         self.perc_oversampling = perc_oversampling
 
-    def _validate_perc_oversampling(self):
+    def _validate_perc_oversampling(self) -> None:
         if self.manual_perc:
             if self.perc_oversampling == -1:
                 raise ValueError("cannot proceed: require percentage of over-sampling if manual_perc == True")
             elif self.perc_oversampling <= 0:
                 raise ValueError("percentage of over-sampling must be a positive real number")
 
-    def fit_resample(self, data: DataFrame, response_variable: str):
+    def fit_resample(self, data: DataFrame, response_variable: str) -> DataFrame:
         
         # Validate Parameters
         self._validate_relevance_method()
@@ -76,8 +76,6 @@ class RandomOverSampler(BaseOverSampler):
                 
                 ## generate synthetic observations in training set
                 ## considered 'minority'
-                ## (see 'over_sampling_ro()' function for details)
-
                 synth_data, pre_numerical_processed_data = self._preprocess_synthetic_data(data = data, indicies = pts.index)
                 synth_data = self._random_oversample(synth_data = synth_data, perc = perc[idx] if not self.manual_perc else self.perc_oversampling + 1)
                 synth_data = self._format_synthetic_data(data = data, synth_data = synth_data, pre_numerical_processed_data = pre_numerical_processed_data)
@@ -132,7 +130,7 @@ class RandomOverSampler(BaseOverSampler):
         
         ## synthetic data quality check
         if sum(synth_data.isnull().sum()) > 0:
-            raise ValueError("oops! synthetic data contains missing values")
+            raise ValueError("synthetic data contains missing values")
 
         return synth_data
 
@@ -144,7 +142,7 @@ class RandomOverSampler(BaseOverSampler):
 
     @replace.setter
     def replace(self, replace: bool) -> None:
-        self._validate_type(value = replace, dtype = (bool, ), msg = "replace should be a boolean.")
+        self._validate_type(value = replace, dtype = (bool, ), msg = f"replace should be a boolean. Passed: {replace}")
         self._replace = replace
 
     @property
@@ -153,7 +151,7 @@ class RandomOverSampler(BaseOverSampler):
 
     @manual_perc.setter
     def manual_perc(self, manual_perc: bool) -> None:
-        self._validate_type(value = manual_perc, dtype = (bool, ), msg = "manual_perc should be a boolean.")
+        self._validate_type(value = manual_perc, dtype = (bool, ), msg = f"manual_perc should be a boolean. Passed: {manual_perc}")
         self._manual_perc = manual_perc
 
     @property
@@ -162,5 +160,5 @@ class RandomOverSampler(BaseOverSampler):
 
     @perc_oversampling.setter
     def perc_oversampling(self, perc_oversampling: int | float) -> None:
-        self._validate_type(value = perc_oversampling, dtype = (float, int), msg = "perc_oversampling should be a float or an int.")
+        self._validate_type(value = perc_oversampling, dtype = (float, int), msg = f"perc_oversampling should be a float or an int. Passed: {perc_oversampling}")
         self._perc_oversampling = perc_oversampling

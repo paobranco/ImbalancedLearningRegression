@@ -8,15 +8,9 @@ Imbalanced Learning for Regression
 https://github.com/paobranco/ImbalancedLearningRegression
 """
 
-from ImbalancedLearningRegression.utils.box_plot_stats import box_plot_stats
-from ImbalancedLearningRegression.utils.phi import phi
-from ImbalancedLearningRegression.utils.phi_ctrl_pts import phi_ctrl_pts
 from ImbalancedLearningRegression.gn import gn
-from ImbalancedLearningRegression.ro import ro
 from ImbalancedLearningRegression.cnn import cnn
 from ImbalancedLearningRegression.enn import enn
-from ImbalancedLearningRegression.smote import smote
-from ImbalancedLearningRegression.adasyn import adasyn
 from ImbalancedLearningRegression.random_under import random_under
 from ImbalancedLearningRegression.tomeklinks import tomeklinks
 
@@ -25,15 +19,9 @@ from ImbalancedLearningRegression.tomeklinks import tomeklinks
 
 __all__ = [
 
-    "box_plot_stats",
-    "phi_ctrl_pts",
-    "phi",
     "gn",
-    "ro",
     "cnn",
     "enn",
-    "smote",
-    "adasyn",
     "random_under",
     "tomeklinks"
 ]

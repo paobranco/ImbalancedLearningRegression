@@ -5,7 +5,7 @@ import random as rd
 from tqdm import tqdm
 
 ## load dependencies - internal
-from ImbalancedLearningRegression.dist_metrics import euclidean_dist, heom_dist, overlap_dist
+from ImbalancedLearningRegression.utils.dist_metrics import euclidean_dist, heom_dist, overlap_dist
 
 ## under-sampling by removing Tomek’s links
 def under_sampling_tomeklinks(

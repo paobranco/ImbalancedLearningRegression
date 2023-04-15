@@ -1,6 +1,6 @@
 ## Third Party Dependencies
 from numpy            import repeat
-from pandas           import DataFrame, Series, Index, Categorical, factorize, to_numeric, options
+from pandas           import DataFrame, Series, Index, Categorical, factorize, to_numeric
 from pandas.api.types import is_numeric_dtype
 
 ## Standard Library Dependencies
@@ -30,7 +30,7 @@ class BaseSampler(ABC):
         if type(value) not in dtype:
             raise TypeError(msg)
 
-    def _validate_relevance_method(self):
+    def _validate_relevance_method(self) -> None:
         if self.rel_method == RELEVANCE_METHOD.MANUAL and self.rel_ctrl_pts_rg is None:
             raise ValueError("rel_ctrl_pts_rg cannot be None while using a manual relevance method.")
 
@@ -206,7 +206,7 @@ class BaseSampler(ABC):
         return new_data
 
     @abstractmethod
-    def fit_resample(self, data: DataFrame, response_variable: str):
+    def fit_resample(self, data: DataFrame, response_variable: str) -> DataFrame:
         raise NotImplementedError("BaseSampler must never call fit_resample as it's just a base abstract class.")
 
     # Define Setters and Getters for BaseSampler

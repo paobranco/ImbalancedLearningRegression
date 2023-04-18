@@ -17,58 +17,59 @@ from ImbalancedLearningRegression.gn import gn
 # synthetic minority over-sampling technique for regression with gaussian noise with boost (based on SMOTEBoost using Adaboost)
 # Look at https://github.com/nunompmoniz/ReBoost/blob/master/R/Functions.R
 
-def smogn_boost(data, test_data, y, TotalIterations, pert, replace, k, error_threshold, rel_thres, samp_method = "balance"):
-
-    # arguments/inputs
+def smogn_boost(
     
-    # data: training set (pandas dataframe)
-    # test_data: test data (pandas dataframe)
-    # y: response variable y by name (string)
-    # TotalIterations: user defined total number of iterations (pos int)
-    # pert: perturbation / noise percentage
-    # replace: sampling replacement (bool)
-    # k: num of neighs for over-sampling (pos int)
-    # error_threshold: user defined error threshold 
-    # rel_thres: user defined relevance threshold 
-    # samp_method: "balance or extreme" - sampling method is perc
+    ## main arguments / inputs
+    
+    data,                       ## training dataset (pandas dataframe)
+    test_data,                  ## test dataset (pandas dataframe)
+    y,                          ## response variable y by name (string)
+    TotalIterations,            ## total number of iterations (pos int)
+    error_threshold = 0.2,      ## error threshold (pos real)
+    pert = 0.02,                ## perturbation / noise percentage (pos real)
+    replace = False,            ## sampling replacement (bool)
+    k = 5,                      ## num of neighs for over-sampling (pos int)
+    samp_method = "balance",     ## over / under sampling ("balance" or extreme")
+        
+    ## phi relevance function arguments / inputs
+
+    rel_thres = 0.5,                  ## relevance threshold considered rare (pos real)
+    
+    ):
     
     print("A")
     
     # read the test data and split features (X) and target value (Y), reference: https://subscription.packtpub.com/book/data/9781838552862/1/ch01lvl1sec10/train-and-test-data
     X_test = test_data.drop(y, axis = 1)
     Y_test = test_data[y]
-    
-    print("B")
-    
+       
     # read the training data and split features (X) and target value (Y)
     X_data = data.drop(y, axis = 1)
     Y_data = data[y]
 
-    print("C")
-    
-    # set for clarity, name of target variable not data
-    y_train = y
-    
+    print("B")
+        
     # set an initial iteration
     iteration = 1
-    
-    print("E")
     
     # set an array of results, beta values, and decision tree predictions based on x_test
     result = np.empty(TotalIterations, dtype=int)
     beta = np.empty(TotalIterations, dtype=int)
     dt_test_predictions = np.empty(TotalIterations, dtype=int)
     
-    print("F")
+    print("C")
     
     # Dt(i) set distribution as 1/m weights, which is length of training data -1, as one of them is the target variable y 
     weights = 1/(len(data))
+    
     print (weights)
+    
     dt_distribution = np.zeros(len(data))
     for i in range(len(data)):
         dt_distribution[i] = weights
            
-    print("G")
+    print("D")
+    
     print(dt_distribution)
    
     ## store data dimensions
@@ -108,15 +109,15 @@ def smogn_boost(data, test_data, y, TotalIterations, pert, replace, k, error_thr
     print("M")
     
     ## sort response variable y by ascending order
-    y = pd.DataFrame(data[d - 1])
-    y_sort = y.sort_values(by = d - 1)
-    y_sort = y_sort[d - 1]
+    yDF = pd.DataFrame(data[d - 1])
+    yDF_sort = yDF.sort_values(by = d - 1)
+    yDF_sort = yDF_sort[d - 1]
     
     print("N")
 
 
     # calling phi control
-    pc = phi_ctrl_pts(y_sort)
+    pc = phi_ctrl_pts(yDF_sort)
     
     ## this is not printing, issue with PC
     print(pc)
@@ -130,14 +131,14 @@ def smogn_boost(data, test_data, y, TotalIterations, pert, replace, k, error_thr
     while iteration <= TotalIterations:
 
         # use initial training data set provided by user to obtain oversampled dataset using SMOGN, calculating it for the bumps
-        dt_over_sampled = smogn(data=data, y = y_train, k = k)
+        dt_over_sampled = smogn(data=data, y=y, k=k)
         
         print("P")
 
         # splitting oversampled data for subsequent training data use below
         df_oversampled = dt_over_sampled, header = 0
-        x_oversampled = df_oversampled.drop(y_train, axis = 1)
-        y_oversampled = df_oversampled[y_train]
+        x_oversampled = df_oversampled.drop(yDF_sort, axis = 1)
+        y_oversampled = df_oversampled[yDF_sort]
 
         print("Q")
         

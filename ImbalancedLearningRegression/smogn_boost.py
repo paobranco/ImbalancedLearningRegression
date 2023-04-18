@@ -21,8 +21,8 @@ def smogn_boost(data, test_data, y, TotalIterations, pert, replace, k, error_thr
 
     # arguments/inputs
     
-    # data: training set
-    # test_data: test data
+    # data: training set (pandas dataframe)
+    # test_data: test data (pandas dataframe)
     # y: response variable y by name (string)
     # TotalIterations: user defined total number of iterations (pos int)
     # pert: perturbation / noise percentage
@@ -35,16 +35,14 @@ def smogn_boost(data, test_data, y, TotalIterations, pert, replace, k, error_thr
     print("A")
     
     # read the test data and split features (X) and target value (Y), reference: https://subscription.packtpub.com/book/data/9781838552862/1/ch01lvl1sec10/train-and-test-data
-    df_testData = pd.read_csv(test_data)
-    X_test = df_testData.drop(y, axis = 1)
-    Y_test = df_testData[y]
+    X_test = test_data.drop(y, axis = 1)
+    Y_test = test_data[y]
     
     print("B")
     
     # read the training data and split features (X) and target value (Y)
-    df_data = pd.read_csv(data)
-    X_data = df_data.drop(y, axis = 1)
-    Y_data = df_data[y]
+    X_data = data.drop(y, axis = 1)
+    Y_data = data[y]
 
     print("C")
     
@@ -74,8 +72,8 @@ def smogn_boost(data, test_data, y, TotalIterations, pert, replace, k, error_thr
     print(dt_distribution)
    
     ## store data dimensions
-    n = len(df_data)
-    d = len(df_data.columns)
+    n = len(data)
+    d = len(data.columns)
     
     print("H")
     
@@ -85,12 +83,12 @@ def smogn_boost(data, test_data, y, TotalIterations, pert, replace, k, error_thr
     print("I")
     
     for j in range(d):
-        feat_dtypes_orig[j] = df_data.iloc[:, j].dtype
+        feat_dtypes_orig[j] = data.iloc[:, j].dtype
         
     print("J")
     
     ## determine column position for response variable y
-    y_col = df_data.columns.get_loc(y)
+    y_col = data.columns.get_loc(y)
     
     print("K")
     
@@ -98,19 +96,19 @@ def smogn_boost(data, test_data, y, TotalIterations, pert, replace, k, error_thr
     if y_col < d - 1:
         cols = list(range(d))
         cols[y_col], cols[d - 1] = cols[d - 1], cols[y_col]
-        df_data = df_data[df_data.columns[cols]]
+        data = data[data.columns[cols]]
         
     print("L")
     
     ## store original feature headers and
     ## encode feature headers to index position
-    feat_names = list(df_data.columns)
-    df_data.columns = range(d)
+    feat_names = list(data.columns)
+    data.columns = range(d)
     
     print("M")
     
     ## sort response variable y by ascending order
-    y = pd.DataFrame(df_data[d - 1])
+    y = pd.DataFrame(data[d - 1])
     y_sort = y.sort_values(by = d - 1)
     y_sort = y_sort[d - 1]
     
@@ -132,7 +130,7 @@ def smogn_boost(data, test_data, y, TotalIterations, pert, replace, k, error_thr
     while iteration <= TotalIterations:
 
         # use initial training data set provided by user to obtain oversampled dataset using SMOGN, calculating it for the bumps
-        dt_over_sampled = smogn(data=df_data, y = y_train, k = k)
+        dt_over_sampled = smogn(data=data, y = y_train, k = k)
         
         print("P")
 

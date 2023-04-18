@@ -32,81 +32,117 @@ def smogn_boost(data, test_data, y, TotalIterations, pert, replace, k, error_thr
     # rel_thres: user defined relevance threshold 
     # samp_method: "balance or extreme" - sampling method is perc
     
+    print("A")
+    
     # read the test data and split features (X) and target value (Y), reference: https://subscription.packtpub.com/book/data/9781838552862/1/ch01lvl1sec10/train-and-test-data
     df_testData = pd.read_csv(test_data)
     X_test = df_testData.drop(y, axis = 1)
     Y_test = df_testData[y]
+    
+    print("B")
     
     # read the training data and split features (X) and target value (Y)
     df_data = pd.read_csv(data)
     X_data = df_data.drop(y, axis = 1)
     Y_data = df_data[y]
 
+    print("C")
+    
     # set for clarity, name of target variable not data
     y_train = y
     
     # set an initial iteration
     iteration = 1
     
+    print("E")
+    
     # set an array of results, beta values, and decision tree predictions based on x_test
     result = np.empty(TotalIterations, dtype=int)
     beta = np.empty(TotalIterations, dtype=int)
     dt_test_predictions = np.empty(TotalIterations, dtype=int)
     
+    print("F")
+    
     # Dt(i) set distribution as 1/m weights, which is length of training data -1, as one of them is the target variable y 
     weights = 1/(len(data))
+    print (weights)
     dt_distribution = np.zeros(len(data))
     for i in range(len(data)):
         dt_distribution[i] = weights
-
+           
+    print("G")
+    print(dt_distribution)
    
     ## store data dimensions
     n = len(df_data)
     d = len(df_data.columns)
     
+    print("H")
+    
     ## store original data types
     feat_dtypes_orig = [None] * d
     
+    print("I")
+    
     for j in range(d):
         feat_dtypes_orig[j] = df_data.iloc[:, j].dtype
+        
+    print("J")
     
     ## determine column position for response variable y
     y_col = df_data.columns.get_loc(y)
+    
+    print("K")
     
     ## move response variable y to last column
     if y_col < d - 1:
         cols = list(range(d))
         cols[y_col], cols[d - 1] = cols[d - 1], cols[y_col]
         df_data = df_data[df_data.columns[cols]]
+        
+    print("L")
     
     ## store original feature headers and
     ## encode feature headers to index position
     feat_names = list(df_data.columns)
     df_data.columns = range(d)
     
+    print("M")
+    
     ## sort response variable y by ascending order
     y = pd.DataFrame(df_data[d - 1])
     y_sort = y.sort_values(by = d - 1)
     y_sort = y_sort[d - 1]
+    
+    print("N")
 
 
     # calling phi control
-    pc = phi_ctrl_pts(y=y_sort)
+    pc = phi_ctrl_pts(y_sort)
+    
+    ## this is not printing, issue with PC
+    print(pc)
     
     # calling only the control points (third value) from the output
     rel_ctrl_pts_rg = pc["ctrl_pts"]
+    
+    print("O")
     
     # loop while iteration is less than user provided iterations
     while iteration <= TotalIterations:
 
         # use initial training data set provided by user to obtain oversampled dataset using SMOGN, calculating it for the bumps
-        dt_over_sampled = smogn(data=df_testData, y = y_train, k = 5)
+        dt_over_sampled = smogn(data=df_data, y = y_train, k = k)
+        
+        print("P")
 
         # splitting oversampled data for subsequent training data use below
         df_oversampled = dt_over_sampled, header = 0
         x_oversampled = df_oversampled.drop(y_train, axis = 1)
         y_oversampled = df_oversampled[y_train]
 
+        print("Q")
+        
         # calls the decision tree and use it to achieve a new model, predict regression value for y (target response variable), and return the predicted values
         dt_model = tree.DecisionTreeRegressor()
         

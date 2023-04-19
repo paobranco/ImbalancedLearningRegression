@@ -59,9 +59,9 @@ def smogn_boost(
     iteration = 1
 
     # set an array of results, beta values, and decision tree predictions based on x_test
-    result = np.empty(TotalIterations, dtype=int)
-    beta = np.empty(TotalIterations, dtype=int)
-    dt_test_predictions = np.empty(TotalIterations, dtype=int)
+    result = np.empty(TotalIterations)
+    beta = np.empty(TotalIterations)
+    dt_test_predictions = np.empty(TotalIterations)
 
     print("C")
 
@@ -121,17 +121,11 @@ def smogn_boost(
         # use initial training data set provided by user to obtain oversampled dataset using SMOGN, calculating it for the bumps
         dt_over_sampled = smogn(data=og_data, y=y, k=k)
 
-        print("H")
-
         # splitting oversampled data for subsequent training data use below
         df_oversampled = pd.DataFrame(dt_over_sampled)
         x_oversampled = df_oversampled.drop(y, axis = 1)
         y_oversampled = df_oversampled[y]
 
-        print(x_oversampled)
-        print(y_oversampled)
-
-        print("K")
 
         # calls the decision tree and use it to achieve a new model, predict regression value for y (target response variable), and return the predicted values
         dt_model = tree.DecisionTreeRegressor()
@@ -143,7 +137,7 @@ def smogn_boost(
         dt_data_predictions = dt_model.predict(X_data)
 
         # predict the features in user provided test data
-        dt_test_predictions.append(dt_model.predict(X_test))
+        dt_test_predictions = np.concatenate([dt_test_predictions, dt_model.predict(X_test)])
 
         # initialize model error rate & epsilon t value
         model_error = np.zeros(len(dt_data_predictions))
@@ -158,18 +152,25 @@ def smogn_boost(
             if model_error[i] > error_threshold:
                 epsilon_t = epsilon_t + dt_distribution[i]
 
+        curr_beta = round(pow(epsilon_t, 2), 10)
+
+
+        #print("BETA: " + str(curr_beta))
         # beta is the update parameter of weights based on the model error rate calculated
-        beta.append(pow(epsilon_t, 2))
+        beta = np.append(beta, curr_beta)
 
+        #print(dt_distribution)
         # update the distribution weights
-        for i in dt_distribution:
+        for i in range(len(dt_distribution)):
             if model_error[i] <= error_threshold:
-                dt_distribution[i] = dt_distribution[i] * beta
-            else:
-                dt_distribution[i] = dt_distribution[i]
+                dt_distribution[i] = dt_distribution[i] * curr_beta
 
+        #print(dt_distribution)      
+            #else:
+                #dt_distribution[i] = dt_distribution[i]
+        
         # normalize the distribution
-        dt_normalized = preprocessing.normalize(dt_distribution, max)
+        dt_normalized = preprocessing.normalize(dt_distribution.reshape(1,-1), norm="max")
 
         # iteration count
         iteration += 1
@@ -178,7 +179,24 @@ def smogn_boost(
     numer = 0
     denom = 0
 
-    for b, i in zip(beta, dt_test_predictions):
-            numer += math.log(1/b) * i
-            denom += math.log(1/b)
+    print(beta)
+    print(dt_test_predictions)
+
+    #for b, i in zip(beta, dt_test_predictions):
+        #print(b)
+        #print(i)
+        #numer += (math.log(1/b) * i)
+        #denom += math.log(1/b)
+
+    for b in range(len(beta)):
+        for i in range(len(dt_test_predictions)):
+            print(b)
+            print(i)
+            numer += (math.log(1/beta[b]) * dt_test_predictions[i])
+            denom += math.log(1/beta[b])
+
+
+    print("NUMER: " + str(numer))
+    print("DENOM: " + str(denom))
+    print(numer/denom)
     return numer/denom

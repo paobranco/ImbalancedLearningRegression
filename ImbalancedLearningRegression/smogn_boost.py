@@ -20,7 +20,6 @@ from ImbalancedLearningRegression.gn import gn
 def smogn_boost(
     
     ## main arguments / inputs
-    
     data,                       ## training dataset (pandas dataframe)
     test_data,                  ## test dataset (pandas dataframe)
     y,                          ## response variable y by name (string)
@@ -30,16 +29,62 @@ def smogn_boost(
     replace = False,            ## sampling replacement (bool)
     k = 5,                      ## num of neighs for over-sampling (pos int)
     samp_method = "balance",     ## over / under sampling ("balance" or extreme")
+    drop_na_col = True,       ## auto drop columns with nan's (bool)
+    drop_na_row = True,       ## auto drop rows with nan's (bool)
         
     ## phi relevance function arguments / inputs
-
     rel_thres = 0.5,                  ## relevance threshold considered rare (pos real)
     
     ):
     
-    print("A")
+    """
+    TO DO: Add description and references 
+    """
+    ## pre-process missing values
+    if bool(drop_na_col) == True:
+        data = data.dropna(axis = 1)  ## drop columns with nan's
     
+<<<<<<< HEAD
     og_data = data
+=======
+    if bool(drop_na_row) == True:
+        data = data.dropna(axis = 0)  ## drop rows with nan's
+    
+    ## quality check for missing values in dataframe
+    if data.isnull().values.any():
+        raise ValueError("cannot proceed: data cannot contain NaN values")
+    
+    ## quality check for y
+    if isinstance(y, str) is False:
+        raise ValueError("cannot proceed: y must be a string")
+    
+    if y in data.columns.values is False:
+        raise ValueError("cannot proceed: y must be an header name (string) \
+               found in the dataframe")
+    
+    ## quality check for k number specification
+    if k > len(data):
+        raise ValueError("cannot proceed: k is greater than number of \
+               observations / rows contained in the dataframe")
+    
+    ## quality check for perturbation
+    if pert > 1 or pert <= 0:
+        raise ValueError("pert must be a real number number: 0 < R < 1")
+    
+    ## quality check for sampling method
+    if samp_method in ["balance", "extreme"] is False:
+        raise ValueError("samp_method must be either: 'balance' or 'extreme' ")
+    
+    ## quality check for relevance threshold parameter
+    if rel_thres == None:
+        raise ValueError("cannot proceed: relevance threshold required")
+    
+    if rel_thres > 1 or rel_thres <= 0:
+        raise ValueError("rel_thres must be a real number number: 0 < R < 1")
+    
+    print("A")
+       
+>>>>>>> 07e6cdaf14de0b3a7a02d2e8be74b54b16845c5b
     # read the test data and split features (X) and target value (Y), reference: https://subscription.packtpub.com/book/data/9781838552862/1/ch01lvl1sec10/train-and-test-data
     X_test = test_data.drop(y, axis = 1)
     Y_test = test_data[y]
@@ -62,71 +107,53 @@ def smogn_boost(
     
     # Dt(i) set distribution as 1/m weights, which is length of training data -1, as one of them is the target variable y 
     weights = 1/(len(data))
-    
-    print (weights)
-    
+       
     dt_distribution = np.zeros(len(data))
     for i in range(len(data)):
         dt_distribution[i] = weights
            
     print("D")
-    
-    print(dt_distribution)
-   
+       
     ## store data dimensions
     n = len(data)
     d = len(data.columns)
-    
-    print("H")
-    
+       
     ## store original data types
     feat_dtypes_orig = [None] * d
     
-    print("I")
-    
     for j in range(d):
         feat_dtypes_orig[j] = data.iloc[:, j].dtype
-        
-    print("J")
-    
+            
     ## determine column position for response variable y
     y_col = data.columns.get_loc(y)
-    
-    print("K")
-    
+       
     ## move response variable y to last column
     if y_col < d - 1:
         cols = list(range(d))
         cols[y_col], cols[d - 1] = cols[d - 1], cols[y_col]
         data = data[data.columns[cols]]
         
-    print("L")
+    print("E")
     
     ## store original feature headers and
     ## encode feature headers to index position
     feat_names = list(data.columns)
     data.columns = range(d)
-    
-    print("M")
-    
+       
     ## sort response variable y by ascending order
     yDF = pd.DataFrame(data[d - 1])
     yDF_sort = yDF.sort_values(by = d - 1)
     yDF_sort = yDF_sort[d - 1]
     
-    print("N")
-
+    print("F")
 
     # calling phi control
     pc = phi_ctrl_pts(yDF_sort)
-    
-    ## this is not printing, issue with PC
-    print(pc)
-    
+        
     # calling only the control points (third value) from the output
     rel_ctrl_pts_rg = pc["ctrl_pts"]
-    
-    print("O")
+
+    print("G")
     
     # loop while iteration is less than user provided iterations
     while iteration <= TotalIterations:
@@ -135,14 +162,14 @@ def smogn_boost(
         # use initial training data set provided by user to obtain oversampled dataset using SMOGN, calculating it for the bumps
         dt_over_sampled = smogn(data=og_data, y="SalePrice", k=k)
         
-        print("P")
+        print("H")
 
         # splitting oversampled data for subsequent training data use below
         df_oversampled = pd.DataFrame(dt_over_sampled)
         x_oversampled = df_oversampled.drop(yDF_sort, axis = 1)
         y_oversampled = df_oversampled[yDF_sort]
 
-        print("Q")
+        print("K")
         
         # calls the decision tree and use it to achieve a new model, predict regression value for y (target response variable), and return the predicted values
         dt_model = tree.DecisionTreeRegressor()

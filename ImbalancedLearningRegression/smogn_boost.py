@@ -39,6 +39,7 @@ def smogn_boost(
     
     print("A")
     
+    og_data = data
     # read the test data and split features (X) and target value (Y), reference: https://subscription.packtpub.com/book/data/9781838552862/1/ch01lvl1sec10/train-and-test-data
     X_test = test_data.drop(y, axis = 1)
     Y_test = test_data[y]
@@ -130,13 +131,14 @@ def smogn_boost(
     # loop while iteration is less than user provided iterations
     while iteration <= TotalIterations:
 
+        print(og_data)
         # use initial training data set provided by user to obtain oversampled dataset using SMOGN, calculating it for the bumps
-        dt_over_sampled = smogn(data=data, y=y, k=k)
+        dt_over_sampled = smogn(data=og_data, y="SalePrice", k=k)
         
         print("P")
 
         # splitting oversampled data for subsequent training data use below
-        df_oversampled = dt_over_sampled, header = 0
+        df_oversampled = pd.DataFrame(dt_over_sampled)
         x_oversampled = df_oversampled.drop(yDF_sort, axis = 1)
         y_oversampled = df_oversampled[yDF_sort]
 

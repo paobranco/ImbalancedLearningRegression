@@ -14,11 +14,10 @@ from ImbalancedLearningRegression.phi_ctrl_pts import phi_ctrl_pts
 from ImbalancedLearningRegression.over_sampling_gn import over_sampling_gn
 from ImbalancedLearningRegression.gn import gn
 
-# synthetic minority over-sampling technique for regression with gaussian noise with boost (based on SMOTEBoost using Adaboost)
-# Look at https://github.com/nunompmoniz/ReBoost/blob/master/R/Functions.R
+## synthetic minority over-sampling technique for regression with gaussian noise with boost (based on SMOTEBoost using Adaboost)
 
 def smogn_boost(
-    
+
     ## main arguments / inputs
     data,                       ## training dataset (pandas dataframe)
     test_data,                  ## test dataset (pandas dataframe)
@@ -31,137 +30,99 @@ def smogn_boost(
     samp_method = "balance",     ## over / under sampling ("balance" or extreme")
     drop_na_col = True,       ## auto drop columns with nan's (bool)
     drop_na_row = True,       ## auto drop rows with nan's (bool)
-        
+
     ## phi relevance function arguments / inputs
     rel_thres = 0.5,                  ## relevance threshold considered rare (pos real)
-    
+
     ):
-    
+
     """
-    TO DO: Add description and references 
+    TO DO: Add description and references
+    # Look at https://github.com/nunompmoniz/ReBoost/blob/master/R/Functions.R
     """
+
     ## pre-process missing values
     if bool(drop_na_col) == True:
         data = data.dropna(axis = 1)  ## drop columns with nan's
-    
-<<<<<<< HEAD
+
     og_data = data
-=======
-    if bool(drop_na_row) == True:
-        data = data.dropna(axis = 0)  ## drop rows with nan's
-    
-    ## quality check for missing values in dataframe
-    if data.isnull().values.any():
-        raise ValueError("cannot proceed: data cannot contain NaN values")
-    
-    ## quality check for y
-    if isinstance(y, str) is False:
-        raise ValueError("cannot proceed: y must be a string")
-    
-    if y in data.columns.values is False:
-        raise ValueError("cannot proceed: y must be an header name (string) \
-               found in the dataframe")
-    
-    ## quality check for k number specification
-    if k > len(data):
-        raise ValueError("cannot proceed: k is greater than number of \
-               observations / rows contained in the dataframe")
-    
-    ## quality check for perturbation
-    if pert > 1 or pert <= 0:
-        raise ValueError("pert must be a real number number: 0 < R < 1")
-    
-    ## quality check for sampling method
-    if samp_method in ["balance", "extreme"] is False:
-        raise ValueError("samp_method must be either: 'balance' or 'extreme' ")
-    
-    ## quality check for relevance threshold parameter
-    if rel_thres == None:
-        raise ValueError("cannot proceed: relevance threshold required")
-    
-    if rel_thres > 1 or rel_thres <= 0:
-        raise ValueError("rel_thres must be a real number number: 0 < R < 1")
-    
-    print("A")
-       
->>>>>>> 07e6cdaf14de0b3a7a02d2e8be74b54b16845c5b
     # read the test data and split features (X) and target value (Y), reference: https://subscription.packtpub.com/book/data/9781838552862/1/ch01lvl1sec10/train-and-test-data
     X_test = test_data.drop(y, axis = 1)
     Y_test = test_data[y]
-       
+
     # read the training data and split features (X) and target value (Y)
     X_data = data.drop(y, axis = 1)
     Y_data = data[y]
 
     print("B")
-        
+
     # set an initial iteration
     iteration = 1
-    
+
     # set an array of results, beta values, and decision tree predictions based on x_test
     result = np.empty(TotalIterations, dtype=int)
     beta = np.empty(TotalIterations, dtype=int)
     dt_test_predictions = np.empty(TotalIterations, dtype=int)
-    
+
     print("C")
-    
-    # Dt(i) set distribution as 1/m weights, which is length of training data -1, as one of them is the target variable y 
+
+    # Dt(i) set distribution as 1/m weights, which is length of training data -1, as one of them is the target variable y
     weights = 1/(len(data))
-       
+
     dt_distribution = np.zeros(len(data))
     for i in range(len(data)):
         dt_distribution[i] = weights
-           
+
     print("D")
-       
+
     ## store data dimensions
     n = len(data)
     d = len(data.columns)
-       
+
     ## store original data types
     feat_dtypes_orig = [None] * d
-    
+
     for j in range(d):
         feat_dtypes_orig[j] = data.iloc[:, j].dtype
-            
+
     ## determine column position for response variable y
     y_col = data.columns.get_loc(y)
-       
+
     ## move response variable y to last column
     if y_col < d - 1:
         cols = list(range(d))
         cols[y_col], cols[d - 1] = cols[d - 1], cols[y_col]
         data = data[data.columns[cols]]
-        
+
     print("E")
-    
+
     ## store original feature headers and
     ## encode feature headers to index position
     feat_names = list(data.columns)
     data.columns = range(d)
-       
+
     ## sort response variable y by ascending order
     yDF = pd.DataFrame(data[d - 1])
     yDF_sort = yDF.sort_values(by = d - 1)
     yDF_sort = yDF_sort[d - 1]
-    
+
     print("F")
 
     # calling phi control
     pc = phi_ctrl_pts(yDF_sort)
-        
+
     # calling only the control points (third value) from the output
     rel_ctrl_pts_rg = pc["ctrl_pts"]
 
     print("G")
-    
+
     # loop while iteration is less than user provided iterations
     while iteration <= TotalIterations:
 
         print(og_data)
         # use initial training data set provided by user to obtain oversampled dataset using SMOGN, calculating it for the bumps
         dt_over_sampled = smogn(data=og_data, y="SalePrice", k=k)
-        
+
         print("H")
 
         # splitting oversampled data for subsequent training data use below
@@ -170,16 +131,16 @@ def smogn_boost(
         y_oversampled = df_oversampled[yDF_sort]
 
         print("K")
-        
+
         # calls the decision tree and use it to achieve a new model, predict regression value for y (target response variable), and return the predicted values
         dt_model = tree.DecisionTreeRegressor()
-        
+
         # train decision tree classifier
         dt_model = dt_model.fit(x_oversampled, y_oversampled)
-        
+
         # predict the features in user provided data
         dt_data_predictions = dt_model.predict(X_data)
-        
+
         # predict the features in user provided test data
         dt_test_predictions.append(dt_model.predict(X_test))
 
@@ -191,11 +152,11 @@ def smogn_boost(
         # for each y in the dataset, calculate whether it is greater/lower than threshold and update accordingly
         for i in range(len(dt_data_predictions)):
             model_error[i] = abs((Y_data[i] - dt_data_predictions[i])/Y_data[i])
-        
+
         for i in range(len(dt_data_predictions)):
             if model_error[i] > error_threshold:
                 epsilon_t = epsilon_t + dt_distribution[i]
-                                      
+
         # beta is the update parameter of weights based on the model error rate calculated
         beta.append(pow(epsilon_t, 2))
 
@@ -206,16 +167,16 @@ def smogn_boost(
             else:
                 dt_distribution[i] = dt_distribution[i]
 
-        # normalize the distribution 
+        # normalize the distribution
         dt_normalized = preprocessing.normalize(dt_distribution, max)
 
         # iteration count
         iteration += 1
-    
+
     # calculate result
     numer = 0
     denom = 0
-    
+
     for b, i in zip(beta, dt_test_predictions):
             numer += math.log(1/b) * i
             denom += math.log(1/b)

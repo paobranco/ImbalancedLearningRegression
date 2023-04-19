@@ -14,8 +14,7 @@ from ImbalancedLearningRegression.phi_ctrl_pts import phi_ctrl_pts
 from ImbalancedLearningRegression.over_sampling_gn import over_sampling_gn
 from ImbalancedLearningRegression.gn import gn
 
-# synthetic minority over-sampling technique for regression with gaussian noise with boost (based on SMOTEBoost using Adaboost)
-# Look at https://github.com/nunompmoniz/ReBoost/blob/master/R/Functions.R
+## synthetic minority over-sampling technique for regression with gaussian noise with boost (based on SMOTEBoost using Adaboost)
 
 def smogn_boost(
     
@@ -39,7 +38,9 @@ def smogn_boost(
     
     """
     TO DO: Add description and references 
+    # Look at https://github.com/nunompmoniz/ReBoost/blob/master/R/Functions.R    
     """
+    
     ## pre-process missing values
     if bool(drop_na_col) == True:
         data = data.dropna(axis = 1)  ## drop columns with nan's
@@ -160,7 +161,8 @@ def smogn_boost(
         print("H")
 
         # splitting oversampled data for subsequent training data use below
-        df_oversampled = dt_over_sampled, header = 0
+        df_oversampled = pd.DataFrame(dt_over_sampled)
+        # df_oversampled = dt_over_sampled, header = 0
         x_oversampled = df_oversampled.drop(yDF_sort, axis = 1)
         y_oversampled = df_oversampled[yDF_sort]
 

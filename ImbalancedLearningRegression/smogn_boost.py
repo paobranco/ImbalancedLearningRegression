@@ -40,39 +40,40 @@ def smogn_boost(
     TO DO: Add description and references
     # Look at https://github.com/nunompmoniz/ReBoost/blob/master/R/Functions.R
     """
-    og_data = data
-    ## pre-process missing values
-    if bool(drop_na_col) == True:
-        data = data.dropna(axis = 1)  ## drop columns with nan's
-
+    ## storing the original training data
+    original_data = data
+        
     # read the test data and split features (X) and target value (Y), reference: https://subscription.packtpub.com/book/data/9781838552862/1/ch01lvl1sec10/train-and-test-data
     X_test = test_data.drop(y, axis = 1)
     Y_test = test_data[y]
 
-    # read the training data and split features (X) and target value (Y)
+    # read the training data and split features (X) and target value column (Y)
     X_data = data.drop(y, axis = 1)
     Y_data = data[y]
-
-    print("B")
 
     # set an initial iteration
     iteration = 1
 
+    ## may initialize as a list instead after more testing, initializing as a numpy array causes issues with NaN for calculations
     # set an array of results, beta values, and decision tree predictions based on x_test
-    result = np.empty(TotalIterations)
-    beta = np.empty(TotalIterations)
-    dt_test_predictions = np.empty(TotalIterations)
-
-    print("C")
-
+    # beta = np.empty(TotalIterations)
+    
+    result = []
+    beta = []
+    dt_test_predictions = np.ones(TotalIterations)
+    
+    print("Dt Test Predictions: ", dt_test_predictions)
+    
     # Dt(i) set distribution as 1/m weights, which is length of training data -1, as one of them is the target variable y
     weights = 1/(len(data))
+    
+    print("Weights: ", weights)
 
     dt_distribution = np.zeros(len(data))
     for i in range(len(data)):
         dt_distribution[i] = weights
 
-    print("D")
+    print("Dt Distribution: ", dt_distribution)
 
     ## store data dimensions
     n = len(data)
@@ -93,8 +94,6 @@ def smogn_boost(
         cols[y_col], cols[d - 1] = cols[d - 1], cols[y_col]
         data = data[data.columns[cols]]
 
-    print("E")
-
     ## store original feature headers and
     ## encode feature headers to index position
     feat_names = list(data.columns)
@@ -105,28 +104,29 @@ def smogn_boost(
     yDF_sort = yDF.sort_values(by = d - 1)
     yDF_sort = yDF_sort[d - 1]
 
-    print("F")
-
     # calling phi control
     pc = phi_ctrl_pts(yDF_sort)
 
+    print("phi control: ", pc)
+    
     # calling only the control points (third value) from the output
     rel_ctrl_pts_rg = pc["ctrl_pts"]
-
-    print("G")
+    
+    print("Phi Control Points: ", rel_ctrl_pts_rg)
 
     # loop while iteration is less than user provided iterations
     while iteration <= TotalIterations:
 
         # use initial training data set provided by user to obtain oversampled dataset using SMOGN, calculating it for the bumps
-        dt_over_sampled = smogn(data=og_data, y=y, k=k)
+        dt_over_sampled = smogn(data=original_data, y=y, k=k)
 
         # splitting oversampled data for subsequent training data use below
         df_oversampled = pd.DataFrame(dt_over_sampled)
         x_oversampled = df_oversampled.drop(y, axis = 1)
         y_oversampled = df_oversampled[y]
 
-
+        print("y_oversampled: ", y_oversampled)
+        
         # calls the decision tree and use it to achieve a new model, predict regression value for y (target response variable), and return the predicted values
         dt_model = tree.DecisionTreeRegressor()
 
@@ -136,8 +136,10 @@ def smogn_boost(
         # predict the features in user provided data
         dt_data_predictions = dt_model.predict(X_data)
 
-        # predict the features in user provided test data
+        # predict the features in user provided test data and add them to the dt_test_predictions array
         dt_test_predictions = np.concatenate([dt_test_predictions, dt_model.predict(X_test)])
+        
+        print("dt test predictions: ", dt_test_predictions)
 
         # initialize model error rate & epsilon t value
         model_error = np.zeros(len(dt_data_predictions))
@@ -147,56 +149,65 @@ def smogn_boost(
         # for each y in the dataset, calculate whether it is greater/lower than threshold and update accordingly
         for i in range(len(dt_data_predictions)):
             model_error[i] = abs((Y_data[i] - dt_data_predictions[i])/Y_data[i])
+        
+        print("Model Error: ", model_error[i])
 
         for i in range(len(dt_data_predictions)):
             if model_error[i] > error_threshold:
                 epsilon_t = epsilon_t + dt_distribution[i]
 
+        print("Dt Data Predictions: ", dt_data_predictions)
+        print("Dt Distribution: ", dt_distribution)
+        print("Epsilon T: ", epsilon_t)
+
+        # set curr_beta as the beta value for each iteration, it is the update parameter of weights based on the model error rate calculated
+        # beta = np.append(beta, curr_beta)
         curr_beta = round(pow(epsilon_t, 2), 10)
-
-
-        #print("BETA: " + str(curr_beta))
-        # beta is the update parameter of weights based on the model error rate calculated
-        beta = np.append(beta, curr_beta)
-
+        beta.append(curr_beta)
+        
+        print("Current Beta: ", epsilon_t)     
+        print("beta: ", beta)
+        
         #print(dt_distribution)
         # update the distribution weights
         for i in range(len(dt_distribution)):
             if model_error[i] <= error_threshold:
                 dt_distribution[i] = dt_distribution[i] * curr_beta
-
-        #print(dt_distribution)      
-            #else:
-                #dt_distribution[i] = dt_distribution[i]
         
         # normalize the distribution
         dt_normalized = preprocessing.normalize(dt_distribution.reshape(1,-1), norm="max")
+        
+        print("Dt Normalized: ", dt_normalized)
 
         # iteration count
         iteration += 1
 
-    # calculate result
-    numer = 0
-    denom = 0
+        # calculate result
+        numer = 0
+        denom = 0  
+    
+        for b in range(len(beta)):
+            for i in range(len(dt_test_predictions)):
+                numer = numer + (math.log((1/beta[b]) * dt_test_predictions[i]))
+                denom = denom + math.log(1/beta[b]) 
+        #return numer/denom
+        value = numer/denom
+        print("Value: ", value)
+        result.append(value)
+        print("Result: ", result)
 
-    print(beta)
-    print(dt_test_predictions)
+
+    # print("number + math.log(1/beta[b]*dt): " + str(numer + float(str(math.log(1/beta[b])* dt_test_predictions[i]))))
+    #print("1/beta b: " + str(1/beta[b]))
+    #print("math.log(1/beta[b]): " + str(math.log(1/beta[b])))
+    #print("math.log(1/beta[b]*dt): " + str(math.log(1/beta[b])* dt_test_predictions[i]))
+    #print("number + math.log(1/beta[b]*dt): " + str(numer + math.log(1/beta[b])* dt_test_predictions[i]))
+    #print("NUMER: " + str(numer))
+    #print("DENOM: " + str(denom))
+    #print(numer/denom)
 
     #for b, i in zip(beta, dt_test_predictions):
         #print(b)
         #print(i)
         #numer += (math.log(1/b) * i)
         #denom += math.log(1/b)
-
-    for b in range(len(beta)):
-        for i in range(len(dt_test_predictions)):
-            print(b)
-            print(i)
-            numer += (math.log(1/beta[b]) * dt_test_predictions[i])
-            denom += math.log(1/beta[b])
-
-
-    print("NUMER: " + str(numer))
-    print("DENOM: " + str(denom))
-    print(numer/denom)
-    return numer/denom

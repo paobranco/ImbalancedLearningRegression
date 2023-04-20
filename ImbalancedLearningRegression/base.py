@@ -92,24 +92,24 @@ class BaseSampler(ABC):
 
     def _identify_intervals(self, response_variable_sorted: "Series[Any]", relevances: list[float]) -> tuple[dict[int, "Series[Any]"], list[float]]:
         ## determine bin (rare or normal) by interval classification
-        interval_indicies = [0]
+        interval_indices = [0]
 
         for i in range(len(response_variable_sorted) - 1):
             if ((relevances[i] >= self.rel_thres and relevances[i + 1] < self.rel_thres) or 
             (relevances[i] < self.rel_thres and relevances[i + 1] >= self.rel_thres)):
-                interval_indicies.append(i + 1)
+                interval_indices.append(i + 1)
 
-        interval_indicies.append(len(response_variable_sorted))
+        interval_indices.append(len(response_variable_sorted))
 
-        ## determine indicies for each interval classification
+        ## determine indices for each interval classification
         intervals: dict[int, "Series[Any]"] = {}
 
-        for i in range(len(interval_indicies) - 1):
-            intervals.update({i: response_variable_sorted.iloc[interval_indicies[i]:interval_indicies[i + 1]]})
+        for i in range(len(interval_indices) - 1):
+            intervals.update({i: response_variable_sorted.iloc[interval_indices[i]:interval_indices[i + 1]]})
 
         ## calculate over / under sampling percentage according to
         ## bump class and user specified method ("balance" or "extreme")
-        samples_to_intervals = round(len(response_variable_sorted) / (len(interval_indicies) - 1))
+        samples_to_intervals = round(len(response_variable_sorted) / (len(interval_indices) - 1))
         perc: list[float] = []
         scale = []
         obj   = []
@@ -121,7 +121,7 @@ class BaseSampler(ABC):
         elif self.samp_method == SAMPLE_METHOD.EXTREME:
             for i in intervals.keys():
                 scale.append(samples_to_intervals ** 2 / len(intervals[i]))
-            scale = (len(interval_indicies) - 1) * samples_to_intervals / sum(scale)
+            scale = (len(interval_indices) - 1) * samples_to_intervals / sum(scale)
             
             for i in intervals.keys():
                 obj.append(round(samples_to_intervals ** 2 / len(intervals[i]) * scale, 2))
@@ -129,8 +129,8 @@ class BaseSampler(ABC):
 
         return intervals, perc
 
-    def _preprocess_synthetic_data(self, data: DataFrame, indicies: Index) -> tuple[DataFrame, DataFrame]:
-        preprocessed_data: DataFrame = data.loc[indicies]
+    def _preprocess_synthetic_data(self, data: DataFrame, indices: Index) -> tuple[DataFrame, DataFrame]:
+        preprocessed_data: DataFrame = data.loc[indices]
 
         ## find features without variation (constant features)
         feat_const = preprocessed_data.columns[preprocessed_data.nunique() == 1]

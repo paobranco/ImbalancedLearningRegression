@@ -6,6 +6,7 @@ from   pandas import Series
 from typing import Any
 
 ## Internal Dependencies
+from ImbalancedLearningRegression.utils.models import BoxPlotStats
 
 ## calculate box plot statistics
 def box_plot_stats(
@@ -14,7 +15,7 @@ def box_plot_stats(
     points: "Series[Any]",   ## input array of values 
     coef: int | float = 1.5  ## positive real number
                              ## (determines how far the whiskers extend from the iqr)
-    ):          
+    ) -> BoxPlotStats:          
     
     """ 
     calculates box plot five-number summary: the lower whisker extreme, the 
@@ -74,17 +75,15 @@ def box_plot_stats(
     upper_whisk = np.compress(x <= upper, x)
     upper_whisk_obs = np.max(upper_whisk)
     
-    ## store box plot results dictionary
-    boxplot_stats = {}
-    boxplot_stats["stats"] = np.array([lower_whisk_obs, 
-                                       first_quart, 
-                                       median, 
-                                       third_quart, 
-                                       upper_whisk_obs])
-   
-    ## store observations beyond the box plot extremes
-    boxplot_stats["xtrms"] = np.array(x[(x < lower_whisk_obs) | 
-                                        (x > upper_whisk_obs)])
-    
+    ## store box plot results dictionary    
+    boxplot_stats: BoxPlotStats = {
+        "stats" : np.array([lower_whisk_obs,
+                            first_quart,
+                            median,
+                            third_quart,
+                            upper_whisk_obs]),
+        "xtrms" : np.array(x[(x < lower_whisk_obs) |
+                             (x > upper_whisk_obs)])
+    }
     ## return dictionary        
     return boxplot_stats

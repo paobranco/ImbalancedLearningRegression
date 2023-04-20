@@ -30,12 +30,12 @@ class BaseSMOTE(BaseOverSampler):
         if self.neighbours > len(data):
             raise ValueError("cannot proceed: neighbours is greater than the number of observations / rows contained in the dataframe")
 
-    def _oversample(self, data: DataFrame, indicies: dict[int, "Series[Any]"], perc: list[float]) -> DataFrame:
+    def _oversample(self, data: DataFrame, indices: dict[int, "Series[Any]"], perc: list[float]) -> DataFrame:
 
         # Create New DataFrame to hold modified DataFrame
         new_data = DataFrame()
 
-        for idx, pts in indicies.items():
+        for idx, pts in indices.items():
 
             ## no sampling
             if perc[idx] <= 1:
@@ -49,7 +49,7 @@ class BaseSMOTE(BaseOverSampler):
                 
                 ## generate synthetic observations in training set
                 ## considered 'minority'
-                synth_data, pre_numerical_processed_data = self._preprocess_synthetic_data(data = data, indicies = pts.index)
+                synth_data, pre_numerical_processed_data = self._preprocess_synthetic_data(data = data, indices = pts.index)
                 synth_data = self._smote_oversample(pre_numerical_processed_data = pre_numerical_processed_data, 
                                                     synth_data = synth_data, perc = perc[idx])
                 synth_data = self._format_synthetic_data(data = data, synth_data = synth_data, pre_numerical_processed_data = pre_numerical_processed_data)
@@ -122,7 +122,7 @@ class BaseSMOTE(BaseOverSampler):
                     )
 
 
-        ## determine indicies of k nearest neighbors
+        ## determine indices of k nearest neighbors
         ## and convert knn index list to matrix
         knn_index = [None] * len(synth_data)
         
@@ -304,7 +304,7 @@ class SMOTE(BaseSMOTE):
         intervals, perc  = self._identify_intervals(response_variable_sorted = response_variable_sorted, relevances = relevances)
 
         # Oversample Data
-        new_data = self._oversample(data = new_data, indicies = intervals, perc = perc)
+        new_data = self._oversample(data = new_data, indices = intervals, perc = perc)
 
         # Reformat New Data and Return
         new_data = self._format_new_data(new_data = new_data, original_data = data, response_variable = response_variable)
@@ -343,11 +343,11 @@ class SVMSMOTE(BaseSMOTE):
         # Train SVM Estimator
         self._train_svm_estimator(data = data)
 
-        # Filter Indicies
-        intervals = self._filter_indicies(indicies = intervals)
+        # Filter indices
+        intervals = self._filter_indices(indices = intervals)
 
         # Oversample Data
-        new_data = self._oversample(data = new_data, indicies = intervals, perc = perc)
+        new_data = self._oversample(data = new_data, indices = intervals, perc = perc)
 
         # Reformat New Data and Return
         new_data = self._format_new_data(new_data = new_data, original_data = data, response_variable = response_variable)
@@ -386,13 +386,13 @@ class SVMSMOTE(BaseSMOTE):
 
         self.svm_estimator.fit(train_X, train_Y)
 
-    def _filter_indicies(self, indicies: dict[int, "Series[Any]"]) -> dict[int, "Series[Any]"]:
-        indicies_new: dict[int, "Series[Any]"] = {}
+    def _filter_indices(self, indices: dict[int, "Series[Any]"]) -> dict[int, "Series[Any]"]:
+        indices_new: dict[int, "Series[Any]"] = {}
 
-        for idx, pts in indicies.items():
-            indicies_new[idx] = pts.loc[pts.index.intersection(self.svm_estimator.support_)]
+        for idx, pts in indices.items():
+            indices_new[idx] = pts.loc[pts.index.intersection(self.svm_estimator.support_)]
 
-        return indicies_new
+        return indices_new
 
     # Define Setters and Getters for SVMSMOTE
 

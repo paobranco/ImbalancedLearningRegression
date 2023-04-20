@@ -230,7 +230,7 @@ def test_preprocess_synthetic_data() -> None:
         0: [0, 1, 2, 3, 4],
         1: [25, 32, 18, 47, 29]})
 
-    synth_data, pre_numerical_synth_data = base_sampler._preprocess_synthetic_data(data = data, indicies = data.index)
+    synth_data, pre_numerical_synth_data = base_sampler._preprocess_synthetic_data(data = data, indices = data.index)
     
     assert_frame_equal(pre_numerical_synth_data, expected_pre_numerical_synth_data)
     assert_frame_equal(synth_data, expected_synth_data)
@@ -246,20 +246,20 @@ def test_format_synthetic_data() -> None:
         'Nomological': ['Alice', 'Bob', 'Charlie', 'David', 'Emily'],
         'Numerical':   [25, 32, 18, 47, 29]})
 
-    synth_data, pre_numerical_synth_data = base_sampler._preprocess_synthetic_data(data = data, indicies = data.index)
+    synth_data, pre_numerical_synth_data = base_sampler._preprocess_synthetic_data(data = data, indices = data.index)
     synth_data = base_sampler._format_synthetic_data(data = data, synth_data = synth_data, pre_numerical_processed_data = pre_numerical_synth_data)
     assert_frame_equal(synth_data, data)
 
     # Test with constant column
     data['Constant'] = ['foobar', 'foobar', 'foobar', 'foobar', 'foobar']
 
-    synth_data, pre_numerical_synth_data = base_sampler._preprocess_synthetic_data(data = data, indicies = data.index)
+    synth_data, pre_numerical_synth_data = base_sampler._preprocess_synthetic_data(data = data, indices = data.index)
     synth_data = base_sampler._format_synthetic_data(data = data, synth_data = synth_data, pre_numerical_processed_data = pre_numerical_synth_data)
     assert_frame_equal(synth_data, data)
 
     # Test when a negative integer is added in an otherwise non-negative column
     expected_data = concat([DataFrame({'Nomological': ['Alice'], 'Numerical': [0], 'Constant': ['foobar']}), data])
-    synth_data, pre_numerical_synth_data = base_sampler._preprocess_synthetic_data(data = data, indicies = data.index)
+    synth_data, pre_numerical_synth_data = base_sampler._preprocess_synthetic_data(data = data, indices = data.index)
     synth_data = concat([DataFrame({0: [0], 1: [-5]}), synth_data])
     synth_data = base_sampler._format_synthetic_data(data = data, synth_data = synth_data, pre_numerical_processed_data = pre_numerical_synth_data)
     assert_frame_equal(synth_data, expected_data)

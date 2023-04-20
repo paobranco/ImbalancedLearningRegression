@@ -46,14 +46,14 @@ class ADASYN(BaseOverSampler):
         intervals, perc  = self._identify_intervals(response_variable_sorted = response_variable_sorted, relevances = relevances)
 
         # Oversample Data
-        new_data = self._oversample(data = new_data, indicies = intervals, perc = perc)
+        new_data = self._oversample(data = new_data, indices = intervals, perc = perc)
 
         # Reformat New Data and Return
         new_data = self._format_new_data(new_data = new_data, original_data = data, response_variable = response_variable)
         return new_data
 
-    def _preprocess_synthetic_data(self, data: DataFrame, indicies: Index) -> tuple[DataFrame, DataFrame]:
-        preprocessed_data: DataFrame = data.loc[indicies]
+    def _preprocess_synthetic_data(self, data: DataFrame, indices: Index) -> tuple[DataFrame, DataFrame]:
+        preprocessed_data: DataFrame = data.loc[indices]
         pre_numerical_processed_data: DataFrame = data.copy()
 
         for data_new in [preprocessed_data, pre_numerical_processed_data]:
@@ -80,12 +80,12 @@ class ADASYN(BaseOverSampler):
 
         return preprocessed_data, pre_numerical_processed_data
 
-    def _oversample(self, data: DataFrame, indicies: dict[int, "Series[Any]"], perc: list[float]) -> DataFrame:
+    def _oversample(self, data: DataFrame, indices: dict[int, "Series[Any]"], perc: list[float]) -> DataFrame:
 
         # Create New DataFrame to hold modified DataFrame
         new_data = DataFrame()
 
-        for idx, pts in indicies.items():
+        for idx, pts in indices.items():
 
             ## no sampling
             if perc[idx] <= 1:
@@ -99,7 +99,7 @@ class ADASYN(BaseOverSampler):
                 
                 ## generate synthetic observations in training set
                 ## considered 'minority'
-                synth_data, pre_numerical_processed_data = self._preprocess_synthetic_data(data = data, indicies = pts.index)
+                synth_data, pre_numerical_processed_data = self._preprocess_synthetic_data(data = data, indices = pts.index)
                 synth_data = self._adasyn_oversample(data = data, synth_data = synth_data, perc = perc[idx])
                 synth_data = self._format_synthetic_data(data = data, synth_data = synth_data, pre_numerical_processed_data = pre_numerical_processed_data)
                 
@@ -184,17 +184,17 @@ class ADASYN(BaseOverSampler):
                         d = len(columns_nom_idx)
                     )
 
-        ## determine indicies of k nearest neighbors
+        ## determine indices of k nearest neighbors
         ## and convert knn index list to matrix
-        knn_indicies      = []
-        majority_ratios   = []
-        majority_indicies = synth_data.index.symmetric_difference(data_orig.index)
+        knn_indices      = []
+        majority_ratios  = []
+        majority_indices = synth_data.index.symmetric_difference(data_orig.index)
         
         for i in range(len(synth_data)):
-            knn_indicies.append(argsort(dist_matrix[i])[1:self.neighbours + 1])
+            knn_indices.append(argsort(dist_matrix[i])[1:self.neighbours + 1])
             num_majority_neighbours = 0
-            for idx in knn_indicies[i]:
-                if idx in majority_indicies:
+            for idx in knn_indices[i]:
+                if idx in majority_indices:
                     num_majority_neighbours += 1
             majority_ratios.append(num_majority_neighbours / self.neighbours)
 
@@ -203,7 +203,7 @@ class ADASYN(BaseOverSampler):
             normalized_majority_ratios.append(ratio / sum(majority_ratios))
         assert(sum(normalized_majority_ratios) > 0.99)
 
-        knn_matrix = array(knn_indicies)
+        knn_matrix = array(knn_indices)
         
         ## total number of new synthetic observations to generate
         n_synth = int(len(synth_data) * (perc - 1))
@@ -225,7 +225,7 @@ class ADASYN(BaseOverSampler):
                         synth_matrix[num + j, :] = synth_data.iloc[i, :]
                     else:
                         neigh = int(random.choice(
-                            a = [idx for idx, sample in enumerate(knn_indicies[i]) if sample not in majority_indicies], # indicies of minority neighbours
+                            a = [idx for idx, sample in enumerate(knn_indices[i]) if sample not in majority_indices], # indices of minority neighbours
                             size = 1))
                         
                         ## conduct synthetic minority over-sampling

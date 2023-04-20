@@ -23,5 +23,5 @@ class BaseOverSampler(BaseSampler):
         raise NotImplementedError("BaseOverSampler must never call fit_resample as it's just a base abstract class.")
 
     @abstractmethod
-    def _oversample(self, data: DataFrame, indicies: dict[int, "Series[Any]"], perc: list[float]) -> DataFrame:
+    def _oversample(self, data: DataFrame, indices: dict[int, "Series[Any]"], perc: list[float]) -> DataFrame:
         raise NotImplementedError("BaseOverSampler must never call _oversample as it's just a base abstract class.")

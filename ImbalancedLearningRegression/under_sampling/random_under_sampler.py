@@ -7,31 +7,33 @@ from pandas import DataFrame, Series, concat
 from typing import Any
 
 ## Internal Dependencies
-from ImbalancedLearningRegression.utils.phi          import phi
-from ImbalancedLearningRegression.utils.phi_ctrl_pts import phi_ctrl_pts
-from ImbalancedLearningRegression.utils.models       import SAMPLE_METHOD, RELEVANCE_METHOD, RELEVANCE_XTRM_TYPE
-from ImbalancedLearningRegression.over_sampling.base import BaseOverSampler
+from ImbalancedLearningRegression.utils.phi           import phi
+from ImbalancedLearningRegression.utils.phi_ctrl_pts  import phi_ctrl_pts
+from ImbalancedLearningRegression.utils.models        import SAMPLE_METHOD, RELEVANCE_METHOD, RELEVANCE_XTRM_TYPE
+from ImbalancedLearningRegression.under_sampling.base import BaseUnderSampler
 
-class RandomOverSampler(BaseOverSampler):
+class RandomUnderSampler(BaseUnderSampler):
 
     def __init__(self, drop_na_row: bool = True, drop_na_col: bool = True, samp_method: SAMPLE_METHOD = SAMPLE_METHOD.BALANCE, 
                  rel_thres: float = 0.5, rel_method: RELEVANCE_METHOD = RELEVANCE_METHOD.AUTO, rel_xtrm_type: RELEVANCE_XTRM_TYPE = RELEVANCE_XTRM_TYPE.BOTH, 
                  rel_coef: float = 1.5, rel_ctrl_pts_rg: list[list[float | int]] | None = None, replace: bool = True, manual_perc: bool = False,
-                 perc_oversampling: int| float = -1) -> None:
+                 perc_undersampling: int| float = -1) -> None:
         
         super().__init__(drop_na_row = drop_na_row, drop_na_col = drop_na_col, samp_method = samp_method,
         rel_thres = rel_thres, rel_method = rel_method, rel_xtrm_type = rel_xtrm_type, rel_coef = rel_coef, rel_ctrl_pts_rg = rel_ctrl_pts_rg)
 
-        self.replace           = replace
-        self.manual_perc       = manual_perc
-        self.perc_oversampling = perc_oversampling
+        self.replace            = replace
+        self.manual_perc        = manual_perc
+        self.perc_undersampling = perc_undersampling
 
-    def _validate_perc_oversampling(self) -> None:
+    def _validate_perc_undersampling(self) -> None:
         if self.manual_perc:
-            if self.perc_oversampling == -1:
-                raise ValueError("cannot proceed: require percentage of over-sampling if manual_perc == True")
-            elif self.perc_oversampling <= 0:
-                raise ValueError("percentage of over-sampling must be a positive real number")
+            if self.perc_undersampling == -1:
+                raise ValueError("cannot proceed: require percentage of under-sampling if manual_perc == True")
+            elif self.perc_undersampling <= 0:
+                raise ValueError("percentage of under-sampling must be a positve real number")
+            elif self.perc_undersampling >= 1:
+                raise ValueError("percentage of under-sampling must be less than 1")
 
     def fit_resample(self, data: DataFrame, response_variable: str) -> DataFrame:
         
@@ -39,7 +41,7 @@ class RandomOverSampler(BaseOverSampler):
         self._validate_relevance_method()
         self._validate_data(data = data)
         self._validate_response_variable(data = data, response_variable = response_variable)
-        self._validate_perc_oversampling()
+        self._validate_perc_undersampling()
 
         # Remove Columns with Null Values
         data = self._preprocess_nan(data = data)
@@ -51,13 +53,13 @@ class RandomOverSampler(BaseOverSampler):
         intervals, perc  = self._identify_intervals(response_variable_sorted = response_variable_sorted, relevances = relevances)
 
         # Oversample Data
-        new_data = self._oversample(data = new_data, indices = intervals, perc = perc)
+        new_data = self._undersample(data = new_data, indices = intervals, perc = perc)
 
         # Reformat New Data and Return
         new_data = self._format_new_data(new_data = new_data, original_data = data, response_variable = response_variable)
         return new_data
 
-    def _oversample(self, data: DataFrame, indices: dict[int, "Series[Any]"], perc: list[float]) -> DataFrame:
+    def _undersample(self, data: DataFrame, indices: dict[int, "Series[Any]"], perc: list[float]) -> DataFrame:
         
         # Create New DataFrame to hold modified DataFrame
         new_data = DataFrame()
@@ -65,65 +67,48 @@ class RandomOverSampler(BaseOverSampler):
         for idx, pts in indices.items():
 
             ## no sampling
-            if perc[idx] <= 1:
-
+            if perc[idx] >= 1:
                 ## simply return no sampling
                 ## results to modified training set
                 new_data = concat([data.loc[pts.index], new_data], ignore_index = True)
 
-            ## over-sampling
-            if perc[idx] > 1:
+            ## under-sampling
+            if perc[idx] < 1:
                 
                 ## generate synthetic observations in training set
                 ## considered 'minority'
                 synth_data, pre_numerical_processed_data = self._preprocess_synthetic_data(data = data, indices = pts.index)
-                synth_data = self._random_oversample(synth_data = synth_data, perc = perc[idx] if not self.manual_perc else self.perc_oversampling + 1)
+                synth_data = self._random_undersample(synth_data = synth_data, perc = perc[idx] if not self.manual_perc else self.perc_undersampling)
                 synth_data = self._format_synthetic_data(data = data, synth_data = synth_data, pre_numerical_processed_data = pre_numerical_processed_data)
                 
                 ## concatenate over-sampling
                 ## results to modified training set
                 new_data = concat([synth_data, new_data], ignore_index = True)
 
-                ## concatenate original data
-                ## to modified training set
-                new_data = concat([data.loc[pts.index], new_data], ignore_index = True)
-
         return new_data
 
-    def _random_oversample(self, synth_data: DataFrame, perc: float) -> DataFrame:
-
-        ## number of new synthetic observations for each rare observation
-        x_synth = int(perc - 1)
+    def _random_undersample(self, synth_data: DataFrame, perc: float) -> DataFrame:
         
         ## total number of new synthetic observations to generate
-        n_synth = int(len(synth_data) * (perc - 1 - x_synth))
+        n_synth = int(len(synth_data) * perc)
         
         ## randomly index data by the number of new synthetic observations
         r_index = random.choice(
             a = tuple(range(0, len(synth_data))), 
-            size = x_synth * len(synth_data) + n_synth if self.replace else n_synth, 
+            size = n_synth, 
             replace = self.replace, 
             p = None
         )
         
         ## create null matrix to store new synthetic observations
-        synth_matrix = ndarray(shape = ((x_synth * len(synth_data) + n_synth), len(synth_data.columns)))
+        synth_matrix = ndarray(shape = (n_synth, len(synth_data.columns)))
 
         ## store data in the synthetic matrix, data indices are chosen randomly above
         count = 0 
-        for i in tqdm(r_index, ascii = True, desc = "r_index"):
+        for i in tqdm(r_index, ascii = True, desc = "new_index"):
             for attr in range(len(synth_data.columns)):
                 synth_matrix[count, attr] = (synth_data.iloc[i, attr])
             count = count + 1
-
-        ## if the number of random chosen samples is greater than the number of samples，
-        ## and replace = False,
-        ## simply duplicate x_synth times the original samples
-        if not self.replace:
-            for i in tqdm(range(x_synth * len(synth_data)), ascii = True, desc = "duplicating_the_same_samples"):
-                for attr in range(len(synth_data.columns)):
-                    synth_matrix[count, attr] = (synth_data.iloc[i % len(synth_data), attr])
-                count = count + 1
 
         ## convert synthetic matrix to dataframe
         synth_data = DataFrame(synth_matrix)
@@ -155,10 +140,10 @@ class RandomOverSampler(BaseOverSampler):
         self._manual_perc = manual_perc
 
     @property
-    def perc_oversampling(self) -> int | float:
-        return self._perc_oversampling
+    def perc_undersampling(self) -> int | float:
+        return self._perc_undersampling
 
-    @perc_oversampling.setter
-    def perc_oversampling(self, perc_oversampling: int | float) -> None:
-        self._validate_type(value = perc_oversampling, dtype = (float, int), msg = f"perc_oversampling should be a float or an int. Passed: {perc_oversampling}")
-        self._perc_oversampling = perc_oversampling
+    @perc_undersampling.setter
+    def perc_undersampling(self, perc_undersampling: int | float) -> None:
+        self._validate_type(value = perc_undersampling, dtype = (float, int), msg = f"perc_undersampling should be a float or an int. Passed: {perc_undersampling}")
+        self._perc_undersampling = perc_undersampling

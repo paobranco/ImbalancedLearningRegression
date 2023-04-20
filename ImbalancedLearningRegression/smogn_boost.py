@@ -47,14 +47,8 @@ def smogn_boost(
     X_data = data.drop(y, axis = 1)
     Y_data = data[y]
 
-    ## may initialize as a list instead after more testing, initializing as a numpy array causes issues with NaN for calculations
-    # set an array of results, beta values, and decision tree predictions based on x_test
-    # beta = np.empty(TotalIterations)
-    
-    result = []
     betas = []
     dt_test_predictions = []
-    # dt_test_predictions = np.ones(TotalIterations)
     
     print("Dt Test Predictions: ", dt_test_predictions)
     
@@ -163,18 +157,13 @@ def smogn_boost(
         dt_normalized = preprocessing.normalize(dt_distribution.reshape(1,-1), norm="max")
         
         print("Dt Normalized: ", dt_normalized)
-    
-    # beta 1 * all prediction values in array of first predictions, beta 2 *..... will still have as many arrays as iterations
-    # add the arrays together, matching index of each array
-    # divide this array by the constant calculated in denom
-    # return 1 array
         
-    ## calculating numerator, looping through the array of arrays, outputs an array of arrays
+    # calculating numerator, looping through the array of arrays, outputs an array of arrays within calculations
     calculations = []
     for idx, predictions in enumerate(dt_test_predictions):
         calculations.append([math.log(1/betas[idx]) * prediction for prediction in predictions])
 
-    # Calculate Numerator
+    # sums arrays within calculations (vector addition) and outputs to numerator
     numerator = [0] * len(calculations[0])
     for vector in calculations:
         for idx, value in enumerate(vector):
@@ -183,6 +172,7 @@ def smogn_boost(
     # Calculate Denominator
     denominator = sum([math.log(1/beta) for beta in betas])
 
+    # calculates and returns the result
     result = [value/denominator for value in numerator]
-
+    print("Final Result: ", result)
     return result

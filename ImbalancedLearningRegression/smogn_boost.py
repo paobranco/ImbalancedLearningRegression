@@ -32,35 +32,40 @@ def smogn_boost(
     ):
 
     """
+    The main function applies a boosting step to SMOGN. 
+    
+    The boosting algorithm was taken from Algorithm 1, shown in 
+    SMOTEBoost for Regression: Improving the Prediction of Extreme Values.
+    
     TO DO: Add description and references
     # Look at https://github.com/nunompmoniz/ReBoost/blob/master/R/Functions.R
+    reference: https://subscription.packtpub.com/book/data/9781838552862/1/ch01lvl1sec10/train-and-test-data
     """
     
     ## storing the original training data
     original_data = data.copy()
         
-    # read the test data and split features (X) and target value (Y), reference: https://subscription.packtpub.com/book/data/9781838552862/1/ch01lvl1sec10/train-and-test-data
+    ## read the test data and split features (X) and target value (Y)
     X_test = test_data.drop(y, axis = 1)
     Y_test = test_data[y]
 
-    # read the training data and split features (X) and target value column (Y)
+    ## read the training data and split features (X) and target value column (Y)
     X_data = data.drop(y, axis = 1)
     Y_data = data[y]
 
-    betas = []
+    ## initialize empty list of beta values, store the beta value for all iterations
+    ## initialize an empty list of test predictions, which will store arrays, an array of predictions for each iteration based on test values
+    total_betas = []
     dt_test_predictions = []
     
-    print("Dt Test Predictions: ", dt_test_predictions)
-    
-    # Dt(i) set distribution as 1/m weights, which is length of training data -1, as one of them is the target variable y
+    ## Dt(i) set distribution as 1/m weights, which is length of training data -1, as one of them is the target variable y
     weights = 1/(len(data))
     
-    print("Weights: ", weights)
-
     dt_distribution = np.zeros(len(data))
     for i in range(len(data)):
         dt_distribution[i] = weights
-
+        
+    print("Weights: ", weights)
     print("Dt Distribution: ", dt_distribution)
 
     ## store data dimensions
@@ -82,8 +87,7 @@ def smogn_boost(
         cols[y_col], cols[d - 1] = cols[d - 1], cols[y_col]
         data = data[data.columns[cols]]
 
-    ## store original feature headers and
-    ## encode feature headers to index position
+    ## store original feature headers and encode feature headers to index position
     feat_names = list(data.columns)
     data.columns = range(d)
 
@@ -92,45 +96,43 @@ def smogn_boost(
     yDF_sort = yDF.sort_values(by = d - 1)
     yDF_sort = yDF_sort[d - 1]
 
-    # loop while iteration is less than user provided iterations
+    ## loop through totalIterations
     for _ in range(totalIterations):
 
-        # use initial training data set provided by user to obtain oversampled dataset using SMOGN, calculating it for the bumps
+        ## use training data provided by user to obtain oversampled dataset using SMOGN, calculating it for the bumps
         dt_over_sampled = smogn(data=original_data, y = y, k = k, rel_ctrl_pts_rg = rel_ctrl_pts_rg)
 
-        # splitting oversampled data for subsequent training data use below
+        ## split the oversampled data for subsequent training data use
         df_oversampled = pd.DataFrame(dt_over_sampled)
         x_oversampled = df_oversampled.drop(y, axis = 1)
         y_oversampled = df_oversampled[y]
-
-        print("y_oversampled: ", y_oversampled)
         
-        # calls the decision tree and use it to achieve a new model, predict regression value for y (target response variable), and return the predicted values
+        ## call the decision tree and use it to achieve a new model, predict regression value for y (target response variable), and return the predicted values
         dt_model = tree.DecisionTreeRegressor()
 
-        # train decision tree classifier
+        ## train decision tree classifier
         dt_model = dt_model.fit(x_oversampled, y_oversampled)
 
-        # predict the features in user provided data
+        ## predict the features in user provided training data
         dt_data_predictions = dt_model.predict(X_data)
 
-        # predict the features in user provided test data and add them to the dt_test_predictions array
-        # dt_test_predictions = np.concatenate([dt_test_predictions, dt_model.predict(X_test)])
+        ## predict the features in user provided test data and add them to the test predictions list
         dt_test_predictions.append(dt_model.predict(X_test))
         
-        print("dt test predictions: ", dt_test_predictions)
+        print("Dt Test Predictions: ", dt_test_predictions)
 
-        # initialize model error rate & epsilon t value
+        ## initialize model error rate, calculates model error for each value
+        ## initialize epsilon_t value
         model_error = np.zeros(len(dt_data_predictions))
         epsilon_t = 0
 
-        # calculate the model error rate of the new model achieved earlier, as the delta between original dataset and predicted oversampled dataset
-        # for each y in the dataset, calculate whether it is greater/lower than threshold and update accordingly
+        ## calculate the model error rate of the new model achieved earlier, as the delta between original dataset and predicted oversampled dataset
         for i in range(len(dt_data_predictions)):
             model_error[i] = abs((Y_data[i] - dt_data_predictions[i])/Y_data[i])
         
             print("Model Error: ", model_error[i])
-
+            
+        ## for each y in the dataset, calculate whether it is greater/lower than threshold and update accordingly
         for i in range(len(dt_data_predictions)):
             if model_error[i] > error_threshold:
                 epsilon_t = epsilon_t + dt_distribution[i]
@@ -139,40 +141,39 @@ def smogn_boost(
         print("Dt Distribution: ", dt_distribution)
         print("Epsilon T: ", epsilon_t)
 
-        # set curr_beta as the beta value for each iteration, it is the update parameter of weights based on the model error rate calculated
-        # beta = np.append(beta, curr_beta)
+        ## set curr_beta as the beta value for each iteration, it is the update parameter of weights based on the model error rate calculated
         curr_beta = round(pow(epsilon_t, 2), 10)
-        betas.append(curr_beta)
+        total_betas.append(curr_beta)
         
         print("Current Beta: ", epsilon_t)     
-        print("betas: ", betas)
+        print("Total Betas: ", total_betas)
         
-        #print(dt_distribution)
-        # update the distribution weights
+        ## update the distribution weights if model error for each index is lower than/equal to the error threshold
         for i in range(len(dt_distribution)):
             if model_error[i] <= error_threshold:
                 dt_distribution[i] = dt_distribution[i] * curr_beta
         
-        # normalize the distribution
+        ## normalize the distribution
         dt_normalized = preprocessing.normalize(dt_distribution.reshape(1,-1), norm="max")
         
         print("Dt Normalized: ", dt_normalized)
-        
-    # calculating numerator, looping through the array of arrays, outputs an array of arrays within calculations
+    
+    ## calculate the final result as numerator and denominator    
+    ## calculating numerator, looping through index in the array of arrays, outputs an array of arrays within calculations
     calculations = []
     for idx, predictions in enumerate(dt_test_predictions):
-        calculations.append([math.log(1/betas[idx]) * prediction for prediction in predictions])
+        calculations.append([math.log(1/total_betas[idx]) * prediction for prediction in predictions])
 
-    # sums arrays within calculations (vector addition) and outputs to numerator
+    ## sums arrays within calculations (vector addition) and outputs to numerator
     numerator = [0] * len(calculations[0])
     for vector in calculations:
         for idx, value in enumerate(vector):
             numerator[idx] += value
 
-    # Calculate Denominator
-    denominator = sum([math.log(1/beta) for beta in betas])
+    ## calculate denominator, looking at each beta in total betas for all iterations
+    denominator = sum([math.log(1/beta) for beta in total_betas])
 
-    # calculates and returns the result
+    ## calculates and returns the final result
     result = [value/denominator for value in numerator]
     print("Final Result: ", result)
     return result

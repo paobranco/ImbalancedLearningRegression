@@ -40,6 +40,7 @@ def smogn_boost(
     TO DO: Add description and references
     # Look at https://github.com/nunompmoniz/ReBoost/blob/master/R/Functions.R
     """
+    
     ## storing the original training data
     original_data = data
         
@@ -60,7 +61,8 @@ def smogn_boost(
     
     result = []
     beta = []
-    dt_test_predictions = np.ones(TotalIterations)
+    dt_test_predictions = []
+    # dt_test_predictions = np.ones(TotalIterations)
     
     print("Dt Test Predictions: ", dt_test_predictions)
     
@@ -137,7 +139,8 @@ def smogn_boost(
         dt_data_predictions = dt_model.predict(X_data)
 
         # predict the features in user provided test data and add them to the dt_test_predictions array
-        dt_test_predictions = np.concatenate([dt_test_predictions, dt_model.predict(X_test)])
+        # dt_test_predictions = np.concatenate([dt_test_predictions, dt_model.predict(X_test)])
+        dt_test_predictions.append(dt_model.predict(X_test))
         
         print("dt test predictions: ", dt_test_predictions)
 
@@ -182,32 +185,21 @@ def smogn_boost(
         # iteration count
         iteration += 1
 
-        # calculate result
-        numer = 0
-        denom = 0  
+    # calculate result
+    #numer = 0
+    denom = 0  
     
-        for b in range(len(beta)):
-            for i in range(len(dt_test_predictions)):
-                numer = numer + (math.log((1/beta[b]) * dt_test_predictions[i]))
-                denom = denom + math.log(1/beta[b]) 
-        #return numer/denom
-        value = numer/denom
-        print("Value: ", value)
-        result.append(value)
-        print("Result: ", result)
-
-
-    # print("number + math.log(1/beta[b]*dt): " + str(numer + float(str(math.log(1/beta[b])* dt_test_predictions[i]))))
-    #print("1/beta b: " + str(1/beta[b]))
-    #print("math.log(1/beta[b]): " + str(math.log(1/beta[b])))
-    #print("math.log(1/beta[b]*dt): " + str(math.log(1/beta[b])* dt_test_predictions[i]))
-    #print("number + math.log(1/beta[b]*dt): " + str(numer + math.log(1/beta[b])* dt_test_predictions[i]))
-    #print("NUMER: " + str(numer))
-    #print("DENOM: " + str(denom))
-    #print(numer/denom)
-
-    #for b, i in zip(beta, dt_test_predictions):
-        #print(b)
-        #print(i)
-        #numer += (math.log(1/b) * i)
-        #denom += math.log(1/b)
+    # beta 1 * all prediction values in array of first predictions, beta 2 *..... will still have as many arrays as iterations
+    # add the arrays together, matching index of each array
+    # divide this array by the constant calculated in denom
+    # return 1 array
+    
+    
+    for i in range(len(dt_test_predictions)):
+        calculation = []
+        for j in range(len(dt_test_predictions[i])):
+            calculation.append((math.log((1/beta[i]) * dt_test_predictions[i][j])))
+            calculation[j] /= (math.log(1/beta[i]))
+        result.append(calculation)
+    print(result)
+    return result

@@ -194,12 +194,42 @@ def smogn_boost(
     # divide this array by the constant calculated in denom
     # return 1 array
     
+    numerator = []
+    denominator = 0
     
+    #print("len dt test pred: ", len(dt_test_predictions)) 
+    
+    ## calculating numerator, looping through the array of arrays, outputs an array of arrays
     for i in range(len(dt_test_predictions)):
         calculation = []
         for j in range(len(dt_test_predictions[i])):
             calculation.append((math.log((1/beta[i]) * dt_test_predictions[i][j])))
-            calculation[j] /= (math.log(1/beta[i]))
-        result.append(calculation)
+            result.append(calculation)
+    
+    print("calculation: ", calculation)
+    
+    ## sum all the arrays calculated in numerator
+
+    for i in range(len(calculation)):
+        for j in range(len(calculation[i])):
+            numerator.append((calculation[i]) + calculation[j][i])
+            result.append(numerator)
+    
+    print("numerator: ", numerator)
+    
+    
+    #for i in range((calculation[0])):
+     #   array_sum = 0.0
+      #  for array in calculation:
+       #     array_sum += array[j][i]
+        #numerator.append(array_sum)
+    
+    ## calculate denominator
+    for i in range(len(beta)):
+        denominator += (math.log((1/beta[i])))
+        
+    ## calculate result      
+    for i in range(len(numerator)):
+        result.append(numerator[i]/denominator)  
     print(result)
     return result

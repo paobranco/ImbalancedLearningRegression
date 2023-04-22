@@ -119,7 +119,7 @@ def smogn_boost(
         ## predict the features in user provided test data and add them to the test predictions list
         dt_test_predictions.append(dt_model.predict(X_test))
         
-        print("Dt Test Predictions: ", dt_test_predictions)
+        print("Dt Test Predictions: ", len(dt_test_predictions))
 
         ## initialize model error rate, calculates model error for each value
         ## initialize epsilon_t value
@@ -176,4 +176,10 @@ def smogn_boost(
     ## calculates and returns the final result
     result = [value/denominator for value in numerator]
     print("Final Result: ", result)
+    
+    ## checking that the final result matches size of test predictions sub array
+    print("Final Result length: ", len(result))
+    for sub_arr in dt_test_predictions:
+        print("Length of dt_test_prediction sub arrays: ", len(sub_arr))
+        
     return result

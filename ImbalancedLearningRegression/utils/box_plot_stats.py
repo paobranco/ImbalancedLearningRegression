@@ -1,12 +1,12 @@
 ## Third Party Dependencies
 import numpy as np
-from   pandas import Series
+from pandas import Series
 
 ## Standard Library Dependencies
 from typing import Any
 
 ## Internal Dependencies
-from ImbalancedLearningRegression.utils.models import BoxPlotStats
+from ImbalancedLearningRegression.utils import BoxPlotStats
 
 ## calculate box plot statistics
 def box_plot_stats(
@@ -22,7 +22,7 @@ def box_plot_stats(
     lower ‘hinge’ (observed value), the median, the upper ‘hinge’, and upper 
     whisker extreme (observed value)
     
-    returns a results dictionary containing 2 items: "stats" and "xtrms"
+    returns BoxPlotStats, which is a dictionary that contains 2 items: "stats" and "xtrms"
     1) the "stats" item contains the box plot five-number summary as an array
     2) the "xtrms" item contains values which lie beyond the box plot extremes
     

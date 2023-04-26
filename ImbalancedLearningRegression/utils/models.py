@@ -5,7 +5,7 @@ from numpy import array
 from enum   import Enum, unique
 from typing import TypedDict
 
-# Enums Declarations
+## Enums Declarations
 @unique
 class SAMPLE_METHOD(Enum):
     BALANCE = "balance"
@@ -28,7 +28,7 @@ class TOMEKLINKS_OPTIONS(Enum):
     MINORITY = "minority"
     BOTH     = "both"
 
-# Typed Dictionaries
+## Typed Dictionaries
 class RelevanceParameters(TypedDict):
     method:   RELEVANCE_METHOD
     num_pts:  int

@@ -7,17 +7,90 @@ from pandas import DataFrame, Series, Index, concat, Categorical, factorize, to_
 from typing import Any
 
 ## Internal Dependencies
-from ImbalancedLearningRegression.utils.phi          import phi
-from ImbalancedLearningRegression.utils.phi_ctrl_pts import phi_ctrl_pts
 from ImbalancedLearningRegression.over_sampling.base import BaseOverSampler
-from ImbalancedLearningRegression.utils.dist_metrics import euclidean_dist, heom_dist, overlap_dist
-from ImbalancedLearningRegression.utils.models       import SAMPLE_METHOD, RELEVANCE_METHOD, RELEVANCE_XTRM_TYPE
+from ImbalancedLearningRegression.utils import (
+    SAMPLE_METHOD, 
+    RELEVANCE_METHOD, 
+    RELEVANCE_XTRM_TYPE,
+    phi,
+    phi_ctrl_pts,
+    euclidean_dist,
+    heom_dist,
+    overlap_dist
+)
 
 class ADASYN(BaseOverSampler):
+    """Class to perform the ADASYN Algorithm.
 
-    def __init__(self, drop_na_row: bool = True, drop_na_col: bool = True, samp_method: SAMPLE_METHOD = SAMPLE_METHOD.BALANCE, 
-                 rel_thres: float = 0.5, rel_method: RELEVANCE_METHOD = RELEVANCE_METHOD.AUTO, rel_xtrm_type: RELEVANCE_XTRM_TYPE = RELEVANCE_XTRM_TYPE.BOTH, 
-                 rel_coef: float | int = 1.5, rel_ctrl_pts_rg: list[list[float | int]] | None = None, neighbours: int = 5) -> None:
+    Parameters
+    ----------
+    drop_na_row: bool, default = True
+        Whether rows with Null values will be dropped in data set.
+
+    drop_na_col: bool, default = True
+        Whether columns with Null values will be dropped in data set.
+
+    samp_method: SAMPLE_METHOD, default = SAMPLE_METHOD.BALANCE
+        Sampling information to resample the data set.
+
+        Possible choices are:
+
+            ``SAMPLE_METHOD.BALANCE``: A balanced amount of resampling. The resampling percentage
+                is determined by the 'average ratio of points to rare/majority intervals' to the
+                particular interval's number of points.
+
+            ``SAMPLE_METHOD.EXTREME``: A more extreme amount of resampling. The resampling percentage
+                is determined by a more extreme (in terms of value) and complex ratio than BALANCE.
+
+    rel_thresh: float, default = 0.5 must be in interval (0, 1]
+        This is the threshold used to determine whether an interval is a minority or majority interval.
+
+    rel_method: RELEVANCE_METHOD, default = RELEVANCE_METHOD.AUTO
+        Whether minority and majority intervals will be determined using internally computed parameters
+        or by using parameters further defined by the user.
+
+        Possible choices are:
+
+            ``RELEVANCE_METHOD.AUTO``: Intervals are determined without further user input.
+
+            ``RELEVANCE_METHOD.MANUAL``: Intervals are determined by using pre-computed points provided
+                by the user.
+
+    rel_xtrm_type: RELEVANCE_XTRM_TYPE, default = RELEVANCE_XTRM_TYPE.BOTH
+        Whether minority and majority intervals will include the head/tail ends samples of the distribution.
+
+        Possible choices are:
+
+            ``RELEVANCE_XTRM_TYPE.BOTH``: Will include all points in their respective intervals.
+
+            ``RELEVANCE_XTRM_TYPE.HIGH``: Will include only centre and tail end in their respective intervals.
+
+            ``RELEVANCE_XTRM_TYPE.LOW``: Will include only centre and head end in their respective intervals.
+
+    rel_coef: int or float, default = 1.5, must be positive greater than 0
+        The coefficient used in box_plot_stats to determine the different quartile points as part of the 
+        different intervals calculations.
+
+    rel_ctrl_pts_rg: (2D array of floats or int) or None, default = None
+        The pre-computed control points used in the manual calculation of the intervals.
+        Used only if rel_method is set to RELEVANCE_METHOD.MANUAL.
+    
+    neighbours: int, default = 5
+        The number of neighbouring minority points used when generating a new synthetic sample.
+
+    """
+    def __init__(
+        self, 
+        drop_na_row: bool = True, 
+        drop_na_col: bool = True, 
+        samp_method: SAMPLE_METHOD = SAMPLE_METHOD.BALANCE, 
+        rel_thres: float = 0.5, 
+        rel_method: RELEVANCE_METHOD = RELEVANCE_METHOD.AUTO, 
+        rel_xtrm_type: RELEVANCE_XTRM_TYPE = RELEVANCE_XTRM_TYPE.BOTH, 
+        rel_coef: float | int = 1.5, 
+        rel_ctrl_pts_rg: list[list[float | int]] | None = None,
+        neighbours: int = 5
+    ) -> None:
 
         super().__init__(drop_na_row = drop_na_row, drop_na_col = drop_na_col, samp_method = samp_method, rel_thres = rel_thres,
         rel_method = rel_method, rel_xtrm_type = rel_xtrm_type, rel_coef = rel_coef, rel_ctrl_pts_rg = rel_ctrl_pts_rg)
@@ -25,30 +98,36 @@ class ADASYN(BaseOverSampler):
         self.neighbours = neighbours
 
     def _validate_neighbours(self, data: DataFrame) -> None:
+        """Validates that the number of neighbours used to generate a new sample is not greater that the number of samples in data set."""
         if self.neighbours > len(data):
             raise ValueError("cannot proceed: neighbours is greater than the number of observations / rows contained in the dataframe")
 
     def fit_resample(self, data: DataFrame, response_variable: str) -> DataFrame:
 
-        # Validate Parameters
+        ## Validate Parameters
         self._validate_relevance_method()
         self._validate_data(data = data)
         self._validate_response_variable(data = data, response_variable = response_variable)
         self._validate_neighbours(data = data)
 
-        # Remove Columns with Null Values
+        ## Remove Columns with Null Values
         data = self._preprocess_nan(data = data)
 
-        # Create new DataFrame that will be returned and identify Minority and Majority Intervals
+        ## Create new DataFrame that will be returned and identify Minority and Majority Intervals
         new_data, response_variable_sorted = self._create_new_data(data = data, response_variable = response_variable)
-        relevance_params = phi_ctrl_pts(response_variable = response_variable_sorted)
+        relevance_params = phi_ctrl_pts(
+            response_variable = response_variable_sorted, 
+            method            = self.rel_method,
+            xtrm_type         = self.rel_xtrm_type,
+            coef              = self.rel_coef,
+            ctrl_pts          = self.rel_ctrl_pts_rg)
         relevances       = phi(response_variable = response_variable_sorted, relevance_parameters = relevance_params)
         intervals, perc  = self._identify_intervals(response_variable_sorted = response_variable_sorted, relevances = relevances)
 
-        # Oversample Data
+        ## Oversample Data
         new_data = self._oversample(data = new_data, indices = intervals, perc = perc)
 
-        # Reformat New Data and Return
+        ## Reformat New Data and Return
         new_data = self._format_new_data(new_data = new_data, original_data = data, response_variable = response_variable)
         return new_data
 
@@ -82,7 +161,7 @@ class ADASYN(BaseOverSampler):
 
     def _oversample(self, data: DataFrame, indices: dict[int, "Series[Any]"], perc: list[float]) -> DataFrame:
 
-        # Create New DataFrame to hold modified DataFrame
+        ## Create New DataFrame to hold modified DataFrame
         new_data = DataFrame()
 
         for idx, pts in indices.items():
@@ -114,8 +193,26 @@ class ADASYN(BaseOverSampler):
         return new_data
     
     def _adasyn_oversample(self, data: DataFrame, synth_data: DataFrame, perc: float) -> DataFrame:
+        """Oversample a minority interval using the ADASYN Algorithm.
 
-        # Create a copy of the original data with no preprocessing and remove constant features from it
+        Parameters
+        ----------
+        data: DataFrame
+            Data set to be oversampled.
+
+        synth_data: DataFrame
+            Pre-processed minority interval, ready to be oversampled.
+
+        perc: float
+            The percentage of oversampling that will be conducted on the minority interval.
+
+        Returns
+        -------
+        synth_data: DataFrame
+            DataFrame that contains the generated synthetic samples for this particular minority interval.
+
+        """
+        ## Create a copy of the original data with no preprocessing and remove constant features from it
         data_orig = data.copy()
         columns_const_idx = data_orig.columns[data_orig.nunique() == 1]
         data_orig = data_orig.drop(columns_const_idx, axis = 1)
@@ -124,7 +221,7 @@ class ADASYN(BaseOverSampler):
         for idx, column in enumerate(data_orig.columns):
             data_orig.rename(columns = { column : idx }, inplace = True)
 
-        # Identify Indexes of Columns storing Nomological vs Numerical values
+        ## Identify Indexes of Columns storing Nomological vs Numerical values
         columns_nom_idx = [idx for idx, column in enumerate(data_orig.columns) if data_orig[column].dtype in ["object", "bool", "datetime64"]]
         columns_num_idx = list(set(list(range(len(data_orig.columns)))) - set(columns_nom_idx))
 
@@ -134,7 +231,7 @@ class ADASYN(BaseOverSampler):
 
         data_orig = data_orig.apply(to_numeric)
 
-        # Identify the range of values for each Numerical Columns
+        ## Identify the range of values for each Numerical Columns
         columns_num_ranges = [max(data_orig.iloc[:, idx]) - min(data_orig.iloc[:, idx]) for idx in columns_num_idx]
 
         ## subset data by either numeric / continuous or nominal / categorical
@@ -187,7 +284,10 @@ class ADASYN(BaseOverSampler):
         ## determine indices of k nearest neighbors
         ## and convert knn index list to matrix
         knn_indices      = []
-        majority_ratios  = []
+
+        ## contains the list of ratios of majority samples to neighbours for each
+        ## minority sample
+        majority_ratios  = [] 
         majority_indices = synth_data.index.symmetric_difference(data_orig.index)
         
         for i in range(len(synth_data)):
@@ -201,7 +301,6 @@ class ADASYN(BaseOverSampler):
         normalized_majority_ratios = []
         for ratio in majority_ratios:
             normalized_majority_ratios.append(ratio / sum(majority_ratios))
-        assert(sum(normalized_majority_ratios) > 0.99)
 
         knn_matrix = array(knn_indices)
         
@@ -221,6 +320,8 @@ class ADASYN(BaseOverSampler):
             if num_generated_examples[i] > 0:
                 num = sum(num_generated_examples[:i])
                 for j in range(num_generated_examples[i]):
+                    ## if there is no minority sample in the neighborhood
+                    ## you duplicate the sample
                     if int(majority_ratios[i]) == 1:
                         synth_matrix[num + j, :] = synth_data.iloc[i, :]
                     else:
@@ -239,7 +340,7 @@ class ADASYN(BaseOverSampler):
                             synth_matrix[num + j, x] = [data_orig.iloc[knn_matrix[i, neigh], x],
                                                         synth_data.iloc[i, x]][round(random.random())]
 
-                        ## generate synthetic y response variable by
+                        ## generate synthetic response variable by
                         ## inverse distance weighted
                         for idx, column in enumerate(columns_num_idx):
                             a = abs(synth_data.iloc[i, column] -
@@ -254,6 +355,7 @@ class ADASYN(BaseOverSampler):
                                             synth_matrix[num + j, columns_nom_idx])
                                             
                             if a == b:
+                                ## Revert to using iloc once Pandas fixes the type-hint error with iloc
                                 synth_matrix[num + j, (len(synth_data.columns) - 1)] = synth_data.values[i, (len(synth_data.columns) - 1)] + data_orig.values[
                                     knn_matrix[i, neigh], (len(synth_data.columns) - 1)] / 2
                             else:
@@ -269,7 +371,7 @@ class ADASYN(BaseOverSampler):
 
         return synth_data
                 
-    # Define Setters and Getters for ADASYN
+    ## Define Setters and Getters for ADASYN
 
     @property
     def neighbours(self) -> int:

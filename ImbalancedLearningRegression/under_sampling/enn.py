@@ -7,17 +7,93 @@ from sklearn.preprocessing import MinMaxScaler
 from typing import Any
 
 ## Internal Dependencies
-from ImbalancedLearningRegression.utils.phi           import phi
-from ImbalancedLearningRegression.utils.phi_ctrl_pts  import phi_ctrl_pts
-from ImbalancedLearningRegression.utils.models        import SAMPLE_METHOD, RELEVANCE_METHOD, RELEVANCE_XTRM_TYPE
 from ImbalancedLearningRegression.under_sampling.base import BaseUnderSampler
+from ImbalancedLearningRegression.utils import (
+    SAMPLE_METHOD, 
+    RELEVANCE_METHOD, 
+    RELEVANCE_XTRM_TYPE,
+    phi,
+    phi_ctrl_pts
+)
 
 class ENN(BaseUnderSampler):
+    """Class to perform the Random Undersampling Algorithm.
+    
+    Parameters
+    ----------
+    neighbour_classifier: KNeighborsClassifier
+        KNeighborsClassifier used to determine if there is loss in model performance
+        while undersampling the majority intervals. 
 
-    def __init__(self, neighbour_classifier: KNeighborsClassifier, drop_na_row: bool = True, drop_na_col: bool = True, 
-                 samp_method: SAMPLE_METHOD = SAMPLE_METHOD.BALANCE, rel_thres: float = 0.5, 
-                 rel_method: RELEVANCE_METHOD = RELEVANCE_METHOD.AUTO, rel_xtrm_type: RELEVANCE_XTRM_TYPE = RELEVANCE_XTRM_TYPE.BOTH, 
-                 rel_coef: float = 1.5, rel_ctrl_pts_rg: list[list[float | int]] | None = None, n_seed: int = 1) -> None:
+    drop_na_row: bool, default = True
+        Whether rows with Null values will be dropped in data set.
+
+    drop_na_col: bool, default = True
+        Whether columns with Null values will be dropped in data set.
+
+    samp_method: SAMPLE_METHOD, default = SAMPLE_METHOD.BALANCE
+        Sampling information to resample the data set.
+
+        Possible choices are:
+
+            ``SAMPLE_METHOD.BALANCE``: A balanced amount of resampling. The resampling percentage
+                is determined by the 'average ratio of points to rare/majority intervals' to the
+                particular interval's number of points.
+
+            ``SAMPLE_METHOD.EXTREME``: A more extreme amount of resampling. The resampling percentage
+                is determined by a more extreme (in terms of value) and complex ratio than BALANCE.
+
+    rel_thresh: float, default = 0.5 must be in interval (0, 1]
+        This is the threshold used to determine whether an interval is a minority or majority interval.
+
+    rel_method: RELEVANCE_METHOD, default = RELEVANCE_METHOD.AUTO
+        Whether minority and majority intervals will be determined using internally computed parameters
+        or by using parameters further defined by the user.
+
+        Possible choices are:
+
+            ``RELEVANCE_METHOD.AUTO``: Intervals are determined without further user input.
+
+            ``RELEVANCE_METHOD.MANUAL``: Intervals are determined by using pre-computed points provided
+                by the user.
+
+    rel_xtrm_type: RELEVANCE_XTRM_TYPE, default = RELEVANCE_XTRM_TYPE.BOTH
+        Whether minority and majority intervals will include the head/tail ends samples of the distribution.
+
+        Possible choices are:
+
+            ``RELEVANCE_XTRM_TYPE.BOTH``: Will include all points in their respective intervals.
+
+            ``RELEVANCE_XTRM_TYPE.HIGH``: Will include only centre and tail end in their respective intervals.
+
+            ``RELEVANCE_XTRM_TYPE.LOW``: Will include only centre and head end in their respective intervals.
+
+    rel_coef: int or float, default = 1.5, must be positive greater than 0
+        The coefficient used in box_plot_stats to determine the different quartile points as part of the 
+        different intervals calculations.
+
+    rel_ctrl_pts_rg: (2D array of floats or int) or None, default = None
+        The pre-computed control points used in the manual calculation of the intervals.
+        Used only if rel_method is set to RELEVANCE_METHOD.MANUAL.
+    
+    n_seed: int, default = 1
+        Determines the minimum number of majority set samples that are used to generate a minimum majority set
+        over the course of the CNN Undersampling algorithm.
+    """
+
+    def __init__(
+        self, 
+        neighbour_classifier: KNeighborsClassifier, 
+        drop_na_row: bool = True, 
+        drop_na_col: bool = True, 
+        samp_method: SAMPLE_METHOD = SAMPLE_METHOD.BALANCE, 
+        rel_thres: float = 0.5, 
+        rel_method: RELEVANCE_METHOD = RELEVANCE_METHOD.AUTO, 
+        rel_xtrm_type: RELEVANCE_XTRM_TYPE = RELEVANCE_XTRM_TYPE.BOTH, 
+        rel_coef: float = 1.5, 
+        rel_ctrl_pts_rg: list[list[float | int]] | None = None, 
+        n_seed: int = 1
+    ) -> None:
         
         super().__init__(drop_na_row = drop_na_row, drop_na_col = drop_na_col, samp_method = samp_method,
         rel_thres = rel_thres, rel_method = rel_method, rel_xtrm_type = rel_xtrm_type, rel_coef = rel_coef, rel_ctrl_pts_rg = rel_ctrl_pts_rg)
@@ -27,35 +103,41 @@ class ENN(BaseUnderSampler):
 
     def fit_resample(self, data: DataFrame, response_variable: str) -> DataFrame:
         
-        # Validate Parameters
+        ## Validate Parameters
         self._validate_relevance_method()
         self._validate_data(data = data)
         self._validate_response_variable(data = data, response_variable = response_variable)
 
-        # Remove Columns with Null Values
+        ## Remove Columns with Null Values
         data = self._preprocess_nan(data = data)
 
-        # Create new DataFrame that will be returned and identify Minority and Majority Intervals
+        ## Create new DataFrame that will be returned and identify Minority and Majority Intervals
         new_data, response_variable_sorted = self._create_new_data(data = data, response_variable = response_variable)
-        relevance_params = phi_ctrl_pts(response_variable = response_variable_sorted)
+        relevance_params = phi_ctrl_pts(
+            response_variable = response_variable_sorted, 
+            method            = self.rel_method,
+            xtrm_type         = self.rel_xtrm_type,
+            coef              = self.rel_coef,
+            ctrl_pts          = self.rel_ctrl_pts_rg)
         relevances       = phi(response_variable = response_variable_sorted, relevance_parameters = relevance_params)
         intervals, perc  = self._identify_intervals(response_variable_sorted = response_variable_sorted, relevances = relevances)
 
-        # Oversample Data
+        ## Undersample Data
         new_data = self._undersample(data = new_data, indices = intervals, perc = perc)
 
-        # Reformat New Data and Return
+        ## Reformat New Data and Return
         new_data = self._format_new_data(new_data = new_data, original_data = data, response_variable = response_variable)
         return new_data
 
     def _undersample(self, data: DataFrame, indices: dict[int, "Series[Any]"], perc: list[float]) -> DataFrame:
 
-        # Determine indices of minority samples
+        ## Determine indices of minority samples
         minority_indices = [index for idx, indexes in indices.items() if perc[idx] >= 1 for index in indexes]
 
-        # Create New DataFrame to hold modified DataFrame
+        ## Create New DataFrame to hold modified DataFrame
         new_data = DataFrame()
-
+        preprocessed_data, pre_numerical_processed_data = self._preprocess_data(data = data)
+        
         for idx, pts in indices.items():
 
             ## no sampling
@@ -69,18 +151,34 @@ class ENN(BaseUnderSampler):
                 
                 ## generate synthetic observations in training set
                 ## considered 'minority'
-                preprocessed_data, pre_numerical_processed_data = self._preprocess_data(data = data)
                 undersampled_data = self._enn_undersample(data = preprocessed_data, majority_indices = pts.index.tolist(), minority_indices = minority_indices)
                 undersampled_data = self._format_synthetic_data(data = data, synth_data = undersampled_data, 
                                                                 pre_numerical_processed_data = pre_numerical_processed_data)
                 
-                ## concatenate over-sampling
+                ## concatenate under-sampling
                 ## results to modified training set
                 new_data = concat([undersampled_data, new_data], ignore_index = True)
 
         return new_data
 
     def _preprocess_data(self, data: DataFrame) -> tuple[DataFrame, DataFrame]:
+        """Pre-processes the entire data set before undersampling.
+        
+        Parameters
+        ----------
+        data: DataFrame
+            The data set to be undersampled.
+
+        Returns
+        -------
+        preprocessed_data: DataFrame
+            The completely pre-processed data set ready to be undersampled.
+
+        pre_numerical_processed_data: DataFrame
+            Pre-Processed DataFrame that still has unmodified nomological columns, which will be used for
+            for formatting the undersampled data set.
+
+        """
 
         preprocessed_data = data.copy()
 
@@ -110,7 +208,25 @@ class ENN(BaseUnderSampler):
         return preprocessed_data, pre_numerical_processed_data
 
     def _enn_undersample(self, data: DataFrame, majority_indices: "list[Any]", minority_indices: "list[Any]") -> DataFrame:
+        """Undersample a majority interval using the ENN Undersampling Algorith.
 
+        Parameters
+        ----------
+        data: DataFrame
+            Preprocessed entire data set ready to be undersampled.
+
+        majority_indices: list[Any]
+            List of indices for this majority interval to be undersampled.
+
+        minority_indices: list[Any]
+            List of all minority indices.
+
+        Returns
+        -------
+        new_data: DataFrame
+            DataFrame that contains the undersampled majority interval.
+
+        """
         ## indices of results
         chosen_indices = []
 
@@ -135,7 +251,7 @@ class ENN(BaseUnderSampler):
 
         return new_data
 
-    # Define Setters and Getters for CNN
+    ## Define Setters and Getters for CNN
 
     @property
     def n_seed(self) -> int:

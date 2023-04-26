@@ -7,19 +7,105 @@ from pandas import DataFrame, Series, concat, isna
 from typing import Any
 
 ## Internal Dependencies
-from ImbalancedLearningRegression.utils.phi            import phi
-from ImbalancedLearningRegression.utils.phi_ctrl_pts   import phi_ctrl_pts
-from ImbalancedLearningRegression.utils.box_plot_stats import box_plot_stats
-from ImbalancedLearningRegression.utils.dist_metrics   import euclidean_dist, heom_dist, overlap_dist
-from ImbalancedLearningRegression.combined.base        import BaseCombinedSampler
-from ImbalancedLearningRegression.utils.models         import SAMPLE_METHOD, RELEVANCE_METHOD, RELEVANCE_XTRM_TYPE
-
+from ImbalancedLearningRegression.combined.base import BaseCombinedSampler
+from ImbalancedLearningRegression.utils import (
+    SAMPLE_METHOD, 
+    RELEVANCE_METHOD, 
+    RELEVANCE_XTRM_TYPE,
+    phi,
+    phi_ctrl_pts,
+    euclidean_dist,
+    heom_dist,
+    overlap_dist
+)
 class SMOGN(BaseCombinedSampler):
+    """Class to perform the SMOGN Algorithm.
+    
+    Parameters
+    ----------
+    drop_na_row: bool, default = True
+        Whether rows with Null values will be dropped in data set.
 
-    def __init__(self, drop_na_row: bool = True, drop_na_col: bool = True, samp_method: SAMPLE_METHOD = SAMPLE_METHOD.BALANCE, 
-                 rel_thres: float = 0.5, rel_method: RELEVANCE_METHOD = RELEVANCE_METHOD.AUTO, rel_xtrm_type: RELEVANCE_XTRM_TYPE = RELEVANCE_XTRM_TYPE.BOTH, 
-                 rel_coef: float | int = 1.5, rel_ctrl_pts_rg: list[list[float | int]] | None = None, under_samp: bool = True, 
-                 pert: int | float = 0.02, replace: bool = False, neighbours: int = 5, seed: int | None = None) -> None:
+    drop_na_col: bool, default = True
+        Whether columns with Null values will be dropped in data set.
+
+    samp_method: SAMPLE_METHOD, default = SAMPLE_METHOD.BALANCE
+        Sampling information to resample the data set.
+
+        Possible choices are:
+
+            ``SAMPLE_METHOD.BALANCE``: A balanced amount of resampling. The resampling percentage
+                is determined by the 'average ratio of points to rare/majority intervals' to the
+                particular interval's number of points.
+
+            ``SAMPLE_METHOD.EXTREME``: A more extreme amount of resampling. The resampling percentage
+                is determined by a more extreme (in terms of value) and complex ratio than BALANCE.
+
+    rel_thresh: float, default = 0.5 must be in interval (0, 1]
+        This is the threshold used to determine whether an interval is a minority or majority interval.
+
+    rel_method: RELEVANCE_METHOD, default = RELEVANCE_METHOD.AUTO
+        Whether minority and majority intervals will be determined using internally computed parameters
+        or by using parameters further defined by the user.
+
+        Possible choices are:
+
+            ``RELEVANCE_METHOD.AUTO``: Intervals are determined without further user input.
+
+            ``RELEVANCE_METHOD.MANUAL``: Intervals are determined by using pre-computed points provided
+                by the user.
+
+    rel_xtrm_type: RELEVANCE_XTRM_TYPE, default = RELEVANCE_XTRM_TYPE.BOTH
+        Whether minority and majority intervals will include the head/tail ends samples of the distribution.
+
+        Possible choices are:
+
+            ``RELEVANCE_XTRM_TYPE.BOTH``: Will include all points in their respective intervals.
+
+            ``RELEVANCE_XTRM_TYPE.HIGH``: Will include only centre and tail end in their respective intervals.
+
+            ``RELEVANCE_XTRM_TYPE.LOW``: Will include only centre and head end in their respective intervals.
+
+    rel_coef: int or float, default = 1.5, must be positive greater than 0
+        The coefficient used in box_plot_stats to determine the different quartile points as part of the 
+        different intervals calculations.
+
+    rel_ctrl_pts_rg: (2D array of floats or int) or None, default = None
+        The pre-computed control points used in the manual calculation of the intervals.
+        Used only if rel_method is set to RELEVANCE_METHOD.MANUAL.
+
+    under_samp: bool, default = True
+        Whether the algorithm will undersample majority intervals, alongside oversampling minority intervals.
+
+    pert: int or float, default = 0.02
+        The degree of variance the algorithm will use for generating synthetic data for oversampling.
+    
+    replace: bool, default = False
+        Whether the same sample can be reused when generating different synthetic samples.
+
+    neighbours: int, default = 5
+        The number of neighbouring minority points used when generating a new synthetic sample.
+
+    seed: int or None, default = None
+        This allows you to set the seed for the variance used when resampling the data set.
+    
+    """
+    def __init__(
+        self, 
+        drop_na_row: bool = True, 
+        drop_na_col: bool = True, 
+        samp_method: SAMPLE_METHOD = SAMPLE_METHOD.BALANCE, 
+        rel_thres: float = 0.5, 
+        rel_method: RELEVANCE_METHOD = RELEVANCE_METHOD.AUTO, 
+        rel_xtrm_type: RELEVANCE_XTRM_TYPE = RELEVANCE_XTRM_TYPE.BOTH, 
+        rel_coef: float | int = 1.5, 
+        rel_ctrl_pts_rg: list[list[float | int]] | None = None, 
+        under_samp: bool = True, 
+        pert: int | float = 0.02, 
+        replace: bool = False, 
+        neighbours: int = 5, 
+        seed: int | None = None
+    ) -> None:
         
         super().__init__(drop_na_row = drop_na_row, drop_na_col = drop_na_col, samp_method = samp_method, rel_thres = rel_thres,
         rel_method = rel_method, rel_xtrm_type = rel_xtrm_type, rel_coef = rel_coef, rel_ctrl_pts_rg = rel_ctrl_pts_rg,
@@ -29,36 +115,42 @@ class SMOGN(BaseCombinedSampler):
         self.seed       = seed
 
     def _validate_neighbours(self, data: DataFrame) -> None:
+        """Validates that the number of neighbours used to generate a new sample is not greater that the number of samples in data set."""
         if self.neighbours > len(data):
             raise ValueError("cannot proceed: neighbours is greater than the number of observations / rows contained in the dataframe")
 
     def fit_resample(self, data: DataFrame, response_variable: str) -> DataFrame:
 
-        # Validate Parameters
+        ## Validate various Parameters
         self._validate_relevance_method()
         self._validate_data(data = data)
         self._validate_response_variable(data = data, response_variable = response_variable)
         self._validate_neighbours(data = data)
 
-        # Remove Columns with Null Values
+        ## Remove Columns with Null Values per drop_na parameters
         data = self._preprocess_nan(data = data)
 
-        # Create new DataFrame that will be returned and identify Minority and Majority Intervals
+        ## Create new DataFrame that will be returned and identify Minority and Majority Intervals
         new_data, response_variable_sorted = self._create_new_data(data = data, response_variable = response_variable)
-        relevance_params = phi_ctrl_pts(response_variable = response_variable_sorted)
+        relevance_params = phi_ctrl_pts(
+            response_variable = response_variable_sorted, 
+            method            = self.rel_method,
+            xtrm_type         = self.rel_xtrm_type,
+            coef              = self.rel_coef,
+            ctrl_pts          = self.rel_ctrl_pts_rg)
         relevances       = phi(response_variable = response_variable_sorted, relevance_parameters = relevance_params)
         intervals, perc  = self._identify_intervals(response_variable_sorted = response_variable_sorted, relevances = relevances)
 
-        # Oversample Data
+        ## Resample Data
         new_data = self._sample(data = new_data, indices = intervals, perc = perc)
 
-        # Reformat New Data and Return
+        ## Reformat New Data and Return
         new_data = self._format_new_data(new_data = new_data, original_data = data, response_variable = response_variable)
         return new_data
 
     def _sample(self, data: DataFrame, indices: dict[int, "Series[Any]"], perc: list[float]) -> DataFrame:
 
-        # Create New DataFrame to hold modified DataFrame
+        ## Create New DataFrame to hold modified DataFrame
         new_data = DataFrame()
 
         for idx, pts in indices.items():
@@ -77,7 +169,7 @@ class SMOGN(BaseCombinedSampler):
                 ## considered 'minority'
                 synth_data, pre_numerical_processed_data = self._preprocess_synthetic_data(data = data, indices = pts.index)
                 synth_data = self._smogn_sample(pre_numerical_processed_data = pre_numerical_processed_data, 
-                                                    synth_data = synth_data, perc = perc[idx])
+                                                synth_data = synth_data, perc = perc[idx])
                 synth_data = self._format_synthetic_data(data = data, synth_data = synth_data, pre_numerical_processed_data = pre_numerical_processed_data)
                 
                 ## concatenate over-sampling
@@ -88,8 +180,8 @@ class SMOGN(BaseCombinedSampler):
                 ## to modified training set
                 new_data = concat([data.loc[pts.index], new_data], ignore_index = True)
 
-            # under-sampling
-            if self.replace is True:
+            ## under-sampling
+            if self.under_samp is True:
                 if perc[idx] < 1:
 
                     ## set random seed 
@@ -117,13 +209,32 @@ class SMOGN(BaseCombinedSampler):
         return new_data
 
     def _smogn_sample(self, pre_numerical_processed_data: DataFrame, synth_data: DataFrame, perc: float) -> DataFrame:
+        """Resamples intervals using the SMOTE with Gaussian Noise Algorithm.
 
-        # Identify Indexes of Columns storing Nomological vs Numerical values
+        Parameters
+        ----------
+        pre_numerical_processed_data: DataFrame
+            Pre-Processed DataFrame that still has unmodified nomological columns.
+            Used in this function only to identify which columns has nomological vs numerical values.
+
+        synth_data: DataFrame
+            Pre-processed minority interval, ready to be oversampled.
+
+        perc: float
+            The percentage of oversampling that will be conducted on the minority interval.
+
+        Returns
+        -------
+        synth_data: DataFrame
+            DataFrame that contains the resampled interval.
+
+        """
+        ## Identify Indexes of Columns storing Nomological vs Numerical values
         columns_nom_idx = [idx for idx, column in enumerate(pre_numerical_processed_data.columns) 
                            if pre_numerical_processed_data[column].dtype in ["object", "bool", "datetime64"]]
         columns_num_idx = list(set(list(range(len(pre_numerical_processed_data.columns)))) - set(columns_nom_idx))
 
-        # Identify the range of values for each Numerical Columns
+        ## Identify the range of values for each Numerical Columns
         columns_num_ranges = [max(synth_data.iloc[:, idx]) - min(synth_data.iloc[:, idx]) for idx in columns_num_idx]
 
         ## subset data by either numeric / continuous or nominal / categorical
@@ -131,7 +242,8 @@ class SMOGN(BaseCombinedSampler):
         data_nom = synth_data.iloc[:, columns_nom_idx]
 
         ## calculate distance between observations based on data types
-        ## store results over null distance matrix of n x n
+        ## store results over null distance matrix of 
+        ## number of minority points in interval x number of minority points in interval
         dist_matrix = ndarray(shape = (len(synth_data), len(synth_data)))
 
         for i in tqdm(range(len(synth_data)), ascii = True, desc = "dist_matrix"):
@@ -230,7 +342,7 @@ class SMOGN(BaseCombinedSampler):
                         size = 1))
 
                     ## conduct synthetic minority over-sampling
-                    ## technique for regression (smoter)
+                    ## technique for regression (smote regression)
                     if neigh in safe_list:
 
                         ## set random seed
@@ -270,7 +382,7 @@ class SMOGN(BaseCombinedSampler):
                                     i * x_synth + j, columns_nom_idx])
                         
                             if a == b:
-                                # Revert to using iloc once Pandas fixes the type-hint error with iloc
+                                ## Revert to using iloc once Pandas fixes the type-hint error with iloc
                                 synth_matrix[i * x_synth + j, 
                                     (len(synth_data.columns) - 1)] = synth_data.values[i, (len(synth_data.columns) - 1)] + synth_data.values[
                                     knn_matrix[i, neigh], (len(synth_data.columns) - 1)] / 2
@@ -282,7 +394,7 @@ class SMOGN(BaseCombinedSampler):
 
                     ## conduct synthetic minority over-sampling technique
                     ## for regression with the introduction of gaussian 
-                    ## noise (smoter-gn)
+                    ## noise (smote regression - gaussian noise)
                     else:
                         if max_dist[i] > self.pert:
                             t_pert = self.pert
@@ -346,7 +458,7 @@ class SMOGN(BaseCombinedSampler):
                     size = 1))
 
                 ## conduct synthetic minority over-sampling 
-                ## technique for regression (smoter)
+                ## technique for regression (smote regression)
                 if neigh in safe_list:
 
                     ##  set random seed
@@ -383,6 +495,7 @@ class SMOGN(BaseCombinedSampler):
                                 x_synth * len(synth_data) + count, columns_nom_idx])
                         
                         if a == b:
+                            ## Revert to using iloc once Pandas fixes the type-hint error with iloc
                             synth_matrix[x_synth * len(synth_data) + count, (len(synth_data.columns) - 1)] = synth_data.values[
                                 i, (len(synth_data.columns) - 1)] + synth_data.values[
                                 knn_matrix[i, neigh], (len(synth_data.columns) - 1)] / 2
@@ -393,7 +506,7 @@ class SMOGN(BaseCombinedSampler):
 
                 ## conduct synthetic minority over-sampling technique
                 ## for regression with the introduction of gaussian 
-                ## noise (smoter-gn)
+                ## noise (smote regression - gaussian noise)
                 else:
 
                     if max_dist[i] > self.pert:
@@ -450,7 +563,7 @@ class SMOGN(BaseCombinedSampler):
 
         return synth_data
 
-    # Define Setters and Getters for SMOGN
+    ## Define Setters and Getters for SMOGN
 
     @property
     def neighbours(self) -> int:

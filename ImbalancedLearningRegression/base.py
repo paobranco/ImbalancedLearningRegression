@@ -8,13 +8,78 @@ from typing import Any
 from abc    import ABC, abstractmethod
 
 ## Internal Dependencies
-from ImbalancedLearningRegression.utils.models import SAMPLE_METHOD, RELEVANCE_METHOD, RELEVANCE_XTRM_TYPE
+from ImbalancedLearningRegression.utils import SAMPLE_METHOD, RELEVANCE_METHOD, RELEVANCE_XTRM_TYPE
 
 class BaseSampler(ABC):
+    """Base class for all sampler algorithms.
 
-    def __init__(self, drop_na_row: bool = True, drop_na_col: bool = True, samp_method: SAMPLE_METHOD = SAMPLE_METHOD.BALANCE, 
-                 rel_thres: float = 0.5, rel_method: RELEVANCE_METHOD = RELEVANCE_METHOD.AUTO, rel_xtrm_type: RELEVANCE_XTRM_TYPE = RELEVANCE_XTRM_TYPE.BOTH, 
-                 rel_coef: float | int = 1.5, rel_ctrl_pts_rg: list[list[float | int]] | None = None) -> None:
+    Warning: This class should not be used directly. Use the derived classes instead.
+    
+    Parameters
+    ----------
+    drop_na_row: bool, default = True
+        Whether rows with Null values will be dropped in data set.
+
+    drop_na_col: bool, default = True
+        Whether columns with Null values will be dropped in data set.
+
+    samp_method: SAMPLE_METHOD, default = SAMPLE_METHOD.BALANCE
+        Sampling information to resample the data set.
+
+        Possible choices are:
+
+            ``SAMPLE_METHOD.BALANCE``: A balanced amount of resampling. The resampling percentage
+                is determined by the 'average ratio of points to rare/majority intervals' to the
+                particular interval's number of points.
+
+            ``SAMPLE_METHOD.EXTREME``: A more extreme amount of resampling. The resampling percentage
+                is determined by a more extreme (in terms of value) and complex ratio than BALANCE.
+
+    rel_thresh: float, default = 0.5 must be in interval (0, 1]
+        This is the threshold used to determine whether an interval is a minority or majority interval.
+
+    rel_method: RELEVANCE_METHOD, default = RELEVANCE_METHOD.AUTO
+        Whether minority and majority intervals will be determined using internally computed parameters
+        or by using parameters further defined by the user.
+
+        Possible choices are:
+
+            ``RELEVANCE_METHOD.AUTO``: Intervals are determined without further user input.
+
+            ``RELEVANCE_METHOD.MANUAL``: Intervals are determined by using pre-computed points provided
+                by the user.
+
+    rel_xtrm_type: RELEVANCE_XTRM_TYPE, default = RELEVANCE_XTRM_TYPE.BOTH
+        Whether minority and majority intervals will include the head/tail ends samples of the distribution.
+
+        Possible choices are:
+
+            ``RELEVANCE_XTRM_TYPE.BOTH``: Will include all points in their respective intervals.
+
+            ``RELEVANCE_XTRM_TYPE.HIGH``: Will include only centre and tail end in their respective intervals.
+
+            ``RELEVANCE_XTRM_TYPE.LOW``: Will include only centre and head end in their respective intervals.
+
+    rel_coef: int or float, default = 1.5, must be positive greater than 0
+        The coefficient used in box_plot_stats to determine the different quartile points as part of the 
+        different intervals calculations.
+
+    rel_ctrl_pts_rg: (2D array of floats or int) or None, default = None
+        The pre-computed control points used in the manual calculation of the intervals.
+        Used only if rel_method is set to RELEVANCE_METHOD.MANUAL.
+    
+    """
+    def __init__(
+        self, 
+        drop_na_row:     bool = True, 
+        drop_na_col:     bool = True, 
+        samp_method:     SAMPLE_METHOD = SAMPLE_METHOD.BALANCE, 
+        rel_thres:       float = 0.5, 
+        rel_method:      RELEVANCE_METHOD = RELEVANCE_METHOD.AUTO, 
+        rel_xtrm_type:   RELEVANCE_XTRM_TYPE = RELEVANCE_XTRM_TYPE.BOTH, 
+        rel_coef:        float | int = 1.5, 
+        rel_ctrl_pts_rg: list[list[float | int]] | None = None
+    ) -> None:
         
         self.drop_na_row     = drop_na_row 
         self.drop_na_col     = drop_na_col 
@@ -27,17 +92,49 @@ class BaseSampler(ABC):
         self.rel_ctrl_pts_rg = rel_ctrl_pts_rg
 
     def _validate_type(self, value: Any, dtype: tuple[type, ...], msg: str) -> None:
+        """Validates whether value is of one of the type in tuple dtype.
+        
+        Parameters
+        ----------
+        value: Object of any type
+            Parameter for which the type is verified.
+
+        dtype: tuple of types, 
+            Where one the types in the tuple should correpond to value, otherwise raises exception
+
+        msg: str
+            Error message used when raising Exception if no types in dtype matches type of value
+        """
         if type(value) not in dtype:
             raise TypeError(msg)
 
     def _validate_relevance_method(self) -> None:
+        """Validates rel_ctrl_pts_rg if RELEVANCE_METHOD.MANUAL is selected.
+        """
         if self.rel_method == RELEVANCE_METHOD.MANUAL and self.rel_ctrl_pts_rg is None:
             raise ValueError("rel_ctrl_pts_rg cannot be None while using a manual relevance method.")
 
     def _validate_data(self, data: DataFrame) -> None:
+        """Validates if data set is a DataFrame.
+        
+        Parameters
+        ----------
+        data: DataFrame
+            Data set to be resampled.
+        """
         self._validate_type(value = data, dtype = (DataFrame, ), msg = "data must be a Pandas Dataframe.")    
 
     def _validate_response_variable(self, data: DataFrame, response_variable: str) -> None:
+        """Validates whether dependent variable matches the specifications for resampling.
+        
+        Parameters
+        ----------
+        data: DatFrame
+            Data set to be resampled.
+
+        response_variable: str
+            Header of the column which represents the dependent variable.
+        """
         self._validate_data(data = data)
         self._validate_type(value = response_variable, dtype = (str, ), msg = "response_variable must be a string.")
 
@@ -47,7 +144,19 @@ class BaseSampler(ABC):
         if not is_numeric_dtype(data[response_variable]):
             raise ValueError("response_variable column in the dataframe must be specified and numeric.")       
 
-    def _preprocess_nan(self, data: DataFrame) -> DataFrame:   
+    def _preprocess_nan(self, data: DataFrame) -> DataFrame:
+        """Removes rows and columns with Null values per drop_na_col and drop_na_row variables.
+        
+        Parameters
+        ----------
+        data: DataFrame
+            Data set to be resampled.
+
+        Returns
+        -------
+        data: DataFrame
+            Data set where rows and columns with Null values may be removed.
+        """   
         if self.drop_na_col == True:
             data = data.dropna(axis = 1)  ## drop columns with nan's
 
@@ -60,7 +169,26 @@ class BaseSampler(ABC):
         return data
 
     def _create_new_data(self, data: DataFrame, response_variable: str) -> tuple[DataFrame, "Series[Any]"]:
-        # Create new DataFrame
+        """Creates a DataFrame which matches the standards required for resampling.
+
+        Parameters
+        ----------
+        data: DataFrame
+            DataFrame containing the data set to be resampled.
+
+        response_variable: str
+            The header of the column which corresponds to the dependent variable in the data set to be resampled.
+
+        Returns
+        -------
+        new_data: DataFrame
+            The DataFrame that will be used throughout execution for resampling.
+
+        response_col_sorted: Series
+            A Series that contains the sorted values of the dependent column.
+
+        """
+        ## Create new DataFrame
         new_data = data.copy()
 
         ## determine column position for response variable
@@ -84,6 +212,13 @@ class BaseSampler(ABC):
         return new_data, response_col_sorted     
 
     def _validate_relevance(self, relevances: list[float]) -> None:
+        """Validates that not all samples are part of one majority/minority interval.
+        
+        Parameters
+        ----------
+        relevances: list[float]
+            List of relevances, one relevance per sample in the data set.
+        """
         if all(i == 0 for i in relevances):
             raise ValueError("redefine phi relevance function: all points are 1")
 
@@ -91,6 +226,27 @@ class BaseSampler(ABC):
             raise ValueError("redefine phi relevance function: all points are 0")   
 
     def _identify_intervals(self, response_variable_sorted: "Series[Any]", relevances: list[float]) -> tuple[dict[int, "Series[Any]"], list[float]]:
+        """Identify the different minority and majority intervals in the data set.
+
+        Parameters
+        ----------
+        response_variable_sorted: Series
+            A Series that contains the sorted values of the dependent column.
+
+        relevances: List of floats
+            A list that contains the calculated relevances for every samples.
+
+        Returns
+        -------
+        intervals: Dictionary with integers for keys and Series for values. 
+            Dictionary where the key is the number corresponding to an interval
+            and the value is a Series that contains the samples that makeup the interval.
+
+
+        percs: List of floats
+            List that contains the computed resampling percentages for each intervals.
+
+        """
         ## determine bin (rare or normal) by interval classification
         interval_indices = [0]
 
@@ -101,7 +257,7 @@ class BaseSampler(ABC):
 
         interval_indices.append(len(response_variable_sorted))
 
-        ## determine indices for each interval classification
+        ## determine the samples for each interval classification
         intervals: dict[int, "Series[Any]"] = {}
 
         for i in range(len(interval_indices) - 1):
@@ -109,27 +265,47 @@ class BaseSampler(ABC):
 
         ## calculate over / under sampling percentage according to
         ## bump class and user specified method ("balance" or "extreme")
-        samples_to_intervals = round(len(response_variable_sorted) / (len(interval_indices) - 1))
-        perc: list[float] = []
+        ratio_samples_to_intervals = round(len(response_variable_sorted) / (len(interval_indices) - 1))
+        percs: list[float] = []
         scale = []
         obj   = []
         
         if self.samp_method == SAMPLE_METHOD.BALANCE:
-            for i in intervals.keys():
-                perc.append(samples_to_intervals / len(intervals[i]))  
+            for interval in intervals.values():
+                percs.append(ratio_samples_to_intervals / len(interval))  
 
         elif self.samp_method == SAMPLE_METHOD.EXTREME:
-            for i in intervals.keys():
-                scale.append(samples_to_intervals ** 2 / len(intervals[i]))
-            scale = (len(interval_indices) - 1) * samples_to_intervals / sum(scale)
+            for interval in intervals.values():
+                scale.append(ratio_samples_to_intervals ** 2 / len(interval))
+            scale = (len(interval_indices) - 1) * ratio_samples_to_intervals / sum(scale)
             
-            for i in intervals.keys():
-                obj.append(round(samples_to_intervals ** 2 / len(intervals[i]) * scale, 2))
-                perc.append(round(obj[i] / len(intervals[i]), 1))
+            for idx, interval in intervals.items():
+                obj.append(round(ratio_samples_to_intervals ** 2 / len(interval) * scale, 2))
+                percs.append(round(obj[idx] / len(interval), 1))
 
-        return intervals, perc
+        return intervals, percs
 
     def _preprocess_synthetic_data(self, data: DataFrame, indices: Index) -> tuple[DataFrame, DataFrame]:
+        """Pre-processes the DataFrame that will contain the resampled data set.
+
+        Parameters
+        ----------
+        data: DataFrame
+            DataFrame that contains the data set that matches our specifications for resampling.
+
+        indicies: Index
+            The Index that contains the indicies for all the points that makeup this interval that will be resampled.
+        
+        Returns
+        -------
+        preprocessed_data: DataFrame
+            Pre-Processed DataFrame that contains the points that will be used for resampling this interval.
+
+        pre_numerical_processed_data: DataFrame
+            Pre-Processed DataFrame that still has unmodified nomological columns, which will be used for 
+            formatting the DataFrame that contains resampled values.
+
+        """
         preprocessed_data: DataFrame = data.loc[indices]
 
         ## find features without variation (constant features)
@@ -158,24 +334,49 @@ class BaseSampler(ABC):
         return preprocessed_data, pre_numerical_processed_data
 
     def _format_synthetic_data(self, data: DataFrame, synth_data: DataFrame, pre_numerical_processed_data: DataFrame) -> DataFrame:
+        """Formats the resampled DataFrame for that particular interval.
 
+        Parameters
+        ----------
+        data: DataFrame
+            DataFrame that contains all of the samples of the data set.
+
+        synth_data: DataFrame
+            DataFrame that contains the post-resampled samples for that particular interval.
+
+        pre_numerical_processed_data: DataFrame
+            Pre-Processed DataFrame that still has unmodified nomological columns, which is
+            used to format the synth_data back into the format of the original data set.
+
+        Returns
+        -------
+        synth_data:
+            DataFrame that contains post-resampled samples for that particular interval,
+            but matches format of the original data set.
+
+        """
         nom_dtypes = ["object", "bool", "datetime64"]
         num_dtypes = ["int64", "float64"]
         const_cols = data.columns[data.nunique() == 1]
 
         for column in pre_numerical_processed_data.columns:
-            if pre_numerical_processed_data[column].dtype in nom_dtypes:
-                code_list = synth_data.loc[:, column].unique()
-                cat_list  = pre_numerical_processed_data.loc[:, column].unique()
+            ## convert encoded nomological column's values back to previous values
+            if pre_numerical_processed_data[column].dtype in nom_dtypes: 
+                encoded_list = synth_data.loc[:, column].unique()                   # list of all encoded values for that column 
+                cat_list     = pre_numerical_processed_data.loc[:, column].unique() # list of all uncoded values for that column
 
-                for x in code_list:
-                    synth_data.loc[:, column] = synth_data.loc[:, column].replace(to_replace = x, value = cat_list[int(x)])
+                for encoded in encoded_list:
+                    # replace all instances of the encoded value by its unencoded value
+                    synth_data.loc[:, column] = synth_data.loc[:, column].replace(to_replace = encoded, value = cat_list[int(encoded)])
             
             ## convert negative values to zero in non-negative features
             elif pre_numerical_processed_data[column].dtype in num_dtypes and (pre_numerical_processed_data[column] > 0).any():
                 synth_data.loc[:, column] = synth_data.loc[:, column].clip(lower = 0)
         
-        synth_data.columns = data.drop(const_cols, axis = 1).columns
+        ## remove constant columns from the original data set copied by value
+        ## and use the remaining column headers and set the resampled DataFrame
+        ## columns to the original dataset
+        synth_data.columns = data.drop(const_cols, axis = 1).columns 
         ## reintroduce constant features previously removed
         for column in const_cols:
             synth_data.insert(
@@ -187,6 +388,25 @@ class BaseSampler(ABC):
         return synth_data
 
     def _format_new_data(self, new_data: DataFrame, original_data: DataFrame, response_variable: str) -> DataFrame:
+        """Formats the whole resampled data set to match the original data set.
+
+        Parameters
+        ----------
+        new_data: DataFrame
+            The DataFrame that contains the resampled data set, which will be formatted.
+
+        original_data: DataFrame
+            The DataFrame that contains the original data set.
+
+        response_variable: str
+            The header of the column which corresponds to the dependent variable in the data set to be resampled.
+
+        Returns
+        -------
+        new_data: DataFrame
+            Formatted resampled DataFrame.
+
+        """
         response_col_pos = original_data.columns.get_loc(response_variable)
         
         ## restore response variable y to original position
@@ -207,9 +427,25 @@ class BaseSampler(ABC):
 
     @abstractmethod
     def fit_resample(self, data: DataFrame, response_variable: str) -> DataFrame:
+        """Resample the data set.
+
+        Parameters
+        ----------
+        data: DataFrame
+            DataFrame that contains the data set to be resampled.
+
+        response_variable: str
+            String that contains the header for the column that contains the dependent variable.
+
+        Returns
+        -------
+        new_data: DataFrame
+            DataFrame that contains the resampled data set.
+
+        """
         raise NotImplementedError("BaseSampler must never call fit_resample as it's just a base abstract class.")
 
-    # Define Setters and Getters for BaseSampler
+    ## Define Setters and Getters for BaseSampler
 
     @property
     def samp_method(self) -> SAMPLE_METHOD:

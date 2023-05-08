@@ -5,6 +5,10 @@ from pandas import read_csv
 ## Internal Dependencies
 from ImbalancedLearningRegression.over_sampling.random_over_sampler import RandomOverSampler
 
+## TODO: Create tests for _oversample and _random_oversample.
+## If test_fit_resample passes, then both methods work as expected
+## but for complete unittest coverage, it's a good thing to add.
+
 def test_fit_resample():
     random_over_sampler = RandomOverSampler()
     data = read_csv("https://raw.githubusercontent.com/paobranco/ImbalancedLearningRegression/master/data/College.csv")
@@ -19,8 +23,11 @@ def test_fit_resample():
 
 def test_validate_perc_oversampling() -> None:
     random_over_sampler = RandomOverSampler()
+
+    # Test Function is manual_perc == False and perc_oversampling == -1
+    random_over_sampler._validate_perc_oversampling()
+
     random_over_sampler.manual_perc = True
-    
     # Test Exception if manual_perc == True and perc_oversampling == -1
     with raises(ValueError):
         random_over_sampler._validate_perc_oversampling()

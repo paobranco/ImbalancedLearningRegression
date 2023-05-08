@@ -2,8 +2,19 @@
 from pytest import raises
 from pandas import read_csv
 
+## Standard Library Dependencies
+from typing        import Any
+from unittest.mock import patch, _patch
+
 ## Internal Dependencies
-from ImbalancedLearningRegression.over_sampling.smote import SMOTE, SVMSMOTE
+from ImbalancedLearningRegression.over_sampling.smote import BaseSMOTE, SMOTE, SVMSMOTE
+
+# BaseSMOTE Tests
+def test_validate_neighbours() -> None:
+    base_smote, p = create_basesmote()
+
+    destroy_basesmote(p)
+
 
 # SMOTE Tests
 def test_smote_fit_resample() -> None:
@@ -62,3 +73,13 @@ def test_svm_smote_neighbours() -> None:
     assert svm_smote.neighbours == 5
     with raises(TypeError):
         svm_smote.neighbours = "foobar" # type: ignore
+
+# Helper Functions
+def create_basesmote() -> tuple[BaseSMOTE, "_patch[Any]"]:
+    p = patch.multiple(BaseSMOTE, __abstractmethods__=set())
+    p.start()
+    base_smote = BaseSMOTE() # type: ignore
+    return base_smote, p 
+
+def destroy_basesmote(p: "_patch[Any]") -> None:
+    p.stop()

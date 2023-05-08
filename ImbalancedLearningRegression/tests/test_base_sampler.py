@@ -10,10 +10,14 @@ from pathlib       import Path
 from unittest.mock import patch, _patch
 
 ## Internal Dependencies
-from ImbalancedLearningRegression.utils.phi          import phi
-from ImbalancedLearningRegression.utils.phi_ctrl_pts import phi_ctrl_pts
-from ImbalancedLearningRegression.base               import BaseSampler
-from ImbalancedLearningRegression.utils.models       import SAMPLE_METHOD, RELEVANCE_METHOD, RELEVANCE_XTRM_TYPE
+from ImbalancedLearningRegression.base  import BaseSampler
+from ImbalancedLearningRegression.utils import (
+    phi,
+    phi_ctrl_pts,
+    SAMPLE_METHOD,
+    RELEVANCE_METHOD,
+    RELEVANCE_XTRM_TYPE
+)
 
 # Test _validate_type function with every used built-in, third-party and internally defined types
 def test_validate_type() -> None:
@@ -285,6 +289,16 @@ def test_format_new_data() -> None:
     assert_frame_equal(new_data, original_data)
 
     destroy_basesampler(p)
+
+def test_fit_resample() -> None:
+    # Create BaseSampler
+    base_sampler, p = create_basesampler()
+
+    with raises(NotImplementedError):
+        base_sampler.fit_resample(data = DataFrame(), response_variable = "foobar")
+
+    destroy_basesampler(p)
+    
 
 # Test Setters
 def test_drop_na_row() -> None:

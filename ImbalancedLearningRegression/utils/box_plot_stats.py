@@ -6,7 +6,7 @@ from pandas import Series
 from typing import Any
 
 ## Internal Dependencies
-from ImbalancedLearningRegression.utils import BoxPlotStats
+from ImbalancedLearningRegression.utils.models import BoxPlotStats
 
 ## calculate box plot statistics
 def box_plot_stats(

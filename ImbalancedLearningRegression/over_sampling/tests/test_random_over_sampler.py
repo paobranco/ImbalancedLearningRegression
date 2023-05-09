@@ -11,15 +11,19 @@ from ImbalancedLearningRegression.over_sampling.random_over_sampler import Rando
 
 def test_fit_resample():
     random_over_sampler = RandomOverSampler()
-    data = read_csv("https://raw.githubusercontent.com/paobranco/ImbalancedLearningRegression/master/data/College.csv")
-    response_variable = "Grad.Rate"
+    data = read_csv("https://raw.githubusercontent.com/paobranco/ImbalancedLearningRegression/master/data/housing.csv")
+    response_variable = "SalePrice"
     
     new_data  = random_over_sampler.fit_resample(data = data, response_variable = response_variable)
 
     diff = new_data.merge(data, how='outer', indicator=True)
     diff = diff.loc[diff['_merge'] == 'left_only']
     diff = diff.drop(columns='_merge')
+    assert len(new_data) != len(data), "fit_resample did not generate any synthetic samples"
     assert diff.empty == True, "fit_resample generated a synthetic sample that is not part of the original dataset"
+
+def test_oversample() -> None:
+    pass
 
 def test_validate_perc_oversampling() -> None:
     random_over_sampler = RandomOverSampler()

@@ -163,7 +163,8 @@ class RandomOverSampler(BaseOverSampler):
                 ## considered 'minority'
                 synth_data, pre_numerical_processed_data = self._preprocess_synthetic_data(data = data, indices = pts.index)
                 synth_data = self._random_oversample(synth_data = synth_data, perc = perc[idx] if not self.manual_perc else self.perc_oversampling + 1)
-                synth_data = self._format_synthetic_data(data = data, synth_data = synth_data, pre_numerical_processed_data = pre_numerical_processed_data)
+                synth_data = self._format_synthetic_data(data = data, synth_data = synth_data, 
+                            pre_numerical_processed_data = pre_numerical_processed_data, indices = pts.index)
                 
                 ## concatenate over-sampling
                 ## results to modified training set

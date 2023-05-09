@@ -306,6 +306,7 @@ class BaseSampler(ABC):
             formatting the DataFrame that contains resampled values.
 
         """
+
         preprocessed_data: DataFrame = data.loc[indices]
 
         ## find features without variation (constant features)
@@ -333,7 +334,7 @@ class BaseSampler(ABC):
 
         return preprocessed_data, pre_numerical_processed_data
 
-    def _format_synthetic_data(self, data: DataFrame, synth_data: DataFrame, pre_numerical_processed_data: DataFrame) -> DataFrame:
+    def _format_synthetic_data(self, data: DataFrame, synth_data: DataFrame, pre_numerical_processed_data: DataFrame, indices: Index) -> DataFrame:
         """Formats the resampled DataFrame for that particular interval.
 
         Parameters
@@ -348,6 +349,9 @@ class BaseSampler(ABC):
             Pre-Processed DataFrame that still has unmodified nomological columns, which is
             used to format the synth_data back into the format of the original data set.
 
+        indices: Index
+            The Index that contains the indices of the points that makeup this resampled interval.
+
         Returns
         -------
         synth_data:
@@ -357,7 +361,8 @@ class BaseSampler(ABC):
         """
         nom_dtypes = ["object", "bool", "datetime64"]
         num_dtypes = ["int64", "float64"]
-        const_cols = data.columns[data.nunique() == 1]
+        interval   = data.loc[indices]
+        const_cols = interval.columns[interval.nunique() == 1]
 
         for column in pre_numerical_processed_data.columns:
             ## convert encoded nomological column's values back to previous values
@@ -376,15 +381,15 @@ class BaseSampler(ABC):
         ## remove constant columns from the original data set copied by value
         ## and use the remaining column headers and set the resampled DataFrame
         ## columns to the original dataset
-        synth_data.columns = data.drop(const_cols, axis = 1).columns 
+        synth_data.columns = interval.drop(const_cols, axis = 1).columns 
         ## reintroduce constant features previously removed
         for column in const_cols:
             synth_data.insert(
-                loc = data.columns.get_loc(column),
+                loc = interval.columns.get_loc(column),
                 column = column,
-                value = repeat(data.loc[0, column], len(synth_data)))
+                value = repeat(interval[column].iloc[0], len(synth_data)))
         
-        ## return over-sampling results dataframe
+        ## return resampled results dataframe
         return synth_data
 
     def _format_new_data(self, new_data: DataFrame, original_data: DataFrame, response_variable: str) -> DataFrame:

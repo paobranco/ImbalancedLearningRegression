@@ -40,5 +40,5 @@ setup(
     
     packages = ['ImbalancedLearningRegression'],
     include_package_data = True,
-    install_requires = ['numpy', 'pandas', 'tqdm', 'sklearn'],
+    install_requires = ['numpy', 'pandas', 'tqdm', 'scikit-learn'],
 )

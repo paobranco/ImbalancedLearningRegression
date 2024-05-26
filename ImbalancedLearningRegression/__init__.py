@@ -1,7 +1,7 @@
 # __init__.py
 
 # Version of the ImbalancedLearningRegression package
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 
 """
 Imbalanced Learning for Regression

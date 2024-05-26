@@ -3,7 +3,7 @@ from setuptools import setup
 setup(
     
     name = 'ImbalancedLearningRegression',
-    version = '0.0.1',
+    version = '0.0.2',
     description = 'Python implementations of preprocesssing imbalanced data for regression',
     long_description = open('README.md').read(),
     long_description_content_type = "text/markdown",
